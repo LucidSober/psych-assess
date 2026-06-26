@@ -1,0 +1,213 @@
+# ============================================================
+# 心理测评系统 - 接口契约 contracts.txt
+# version: 1.1（与 designplan.txt v1.1 对齐）
+# 内容：record_answer 工具定义 + AssessmentState Schema
+# 依赖：scale JSON（SDS / SAS）已含分值、反向题、分段映射，本文不重复
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 一、record_answer —— 大模型唯一的结构化输出工具
+# ------------------------------------------------------------
+# 约束：
+#  - 大模型在 [MAP] 节点必须且只能通过本工具输出，禁止自由文本作答
+#  - 不产生分数：option_no 仅是“用户选了第几个选项”，计分由 scoreScale() 做
+#  - option_no 合法集来自当前 scale JSON 的该题选项数（SDS/SAS 均为 1..4）
+#  - 无法确定选项时 option_no 必须为 null，并给出较低 confidence，交由 [GATE-1] 追问
+
+{
+  "type": "function",
+  "function": {
+    "name": "record_answer",
+    "description": "将用户对当前 pending_item 的口语回答，映射为结构化作答。仅记录选项编号与置信度，不计算分数。无法判断时 option_no 置 null。",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_id", "option_no", "confidence", "evidence"],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "description": "当前所答题目的 id，必须等于 state.pending_item，禁止跨题作答"
+        },
+        "option_no": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 4,
+          "description": "用户所选选项序号（1 起）。合法上界以 scale JSON 该题为准；无法确定时为 null"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "映射置信度。低于 gates.confidence_threshold 或 option_no=null 触发追问"
+        },
+        "evidence": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "支撑该映射的用户原话片段，用于审计回溯（log_evidence）"
+        },
+        "crisis_signal": {
+          "type": "boolean",
+          "default": false,
+          "description": "自由文本中是否出现自伤/危机信号。true 则 [CRISIS CHECK] 命中，优先于计分与闸门"
+        },
+        "amend_target_item_id": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "若用户在表达对此前某题的修正，填该题 id，由 [INTENT] 节点重定位；否则为 null"
+        }
+      }
+    }
+  }
+}
+
+# Schema 校验（security.output_schema_validation）失败示例：
+#  - option_no=5（越界）/ option_no=0 / item_id≠pending_item
+#  失败按 max_schema_retries 重试，耗尽 → [HUMAN_HANDOFF]
+
+
+# ------------------------------------------------------------
+# 二、AssessmentState —— 会话内核状态（程序持有，模型只读注入子集）
+# ------------------------------------------------------------
+# 说明：
+#  - 模型每轮只读到 pending_item + 最近 history_window_turns 轮，禁注入全量 state
+#  - 所有计数、状态流转由程序维护，模型不得改写
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AssessmentState",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id", "scale_id", "scale_version", "scoring_version",
+    "status", "pending_item", "answered_count", "low_confidence_count",
+    "answers", "turn_count", "started_at"
+  ],
+  "properties": {
+
+    "session_id":      { "type": "string", "description": "会话唯一标识" },
+
+    "scale_id":        { "type": "string", "enum": ["SDS", "SAS"] },
+    "scale_version":   { "type": "string", "description": "如 SDS-v1，写入便于追溯" },
+    "scoring_version": { "type": "string", "description": "如 score-v1" },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "in_progress",     // 作答中
+        "ready_to_score",  // 20 题齐，待计分
+        "completed",       // 已出报告
+        "crisis",          // 命中危机，中断
+        "invalid",         // 低置信超限，不出分
+        "abandoned",       // 超时 / 超轮次
+        "handoff"          // 转人工
+      ]
+    },
+
+    "pending_item": {
+      "type": ["string", "null"],
+      "description": "当前待作答题 id；全部完成或进入终态时为 null"
+    },
+
+    "answered_count":       { "type": "integer", "minimum": 0 },
+    "low_confidence_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "skip_and_flag 累计数；超 max_low_confidence_items → status=invalid"
+    },
+
+    "answers": {
+      "type": "array",
+      "description": "已落库作答，顺序即作答顺序",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item_id", "option_no", "confidence", "flagged_low_confidence"],
+        "properties": {
+          "item_id":    { "type": "string" },
+          "option_no":  { "type": ["integer", "null"], "minimum": 1, "maximum": 4 },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "evidence":   { "type": "string", "maxLength": 200 },
+          "flagged_low_confidence": {
+            "type": "boolean",
+            "description": "追问耗尽后 skip_and_flag 标记的题；option_no 可为 null"
+          },
+          "followup_used": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "该题已追问次数，受 max_followups_per_item 约束"
+          },
+          "recorded_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+
+    "history": {
+      "type": "array",
+      "description": "对话滑动窗口，仅保留最近 history_window_turns 轮",
+      "items": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role":    { "type": "string", "enum": ["assistant", "user"] },
+          "content": { "type": "string" }
+        }
+      }
+    },
+
+    "turn_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "总轮数，超 max_total_turns → status=abandoned"
+    },
+
+    "schema_retries": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "当前题 Schema 校验已重试次数，受 max_schema_retries 约束"
+    },
+
+    "score_result": {
+      "type": ["object", "null"],
+      "description": "仅 [SCORE] 后由 scoreScale() 写入，模型只读用于 [REPORT]",
+      "additionalProperties": false,
+      "properties": {
+        "raw_score":      { "type": "integer", "description": "粗分 X = 各题所选 option.score 之和，范围 [20,80]" },
+        "standard_score": { "type": "integer", "description": "标准分 Y = Math.floor(X * 1.25)，范围 [25,100]" },
+        "severity_label": { "type": "string",  "description": "命中的 severity_levels[].label，如 无抑郁/轻度焦虑" },
+        "advice":         { "type": "string",  "description": "命中区间的 severity_levels[].advice 原文，模型仅可措辞包装不可改义" },
+        "crisis_item_hit":{ "type": "boolean", "default": false, "description": "结构化危机题是否命中（仅 SDS 第19题可能为 true）" }
+      }
+    },
+
+    "crisis_triggered": {
+      "type": "boolean",
+      "default": false,
+      "description": "是否曾命中危机；true 时结合 halt_on_trigger 决定是否中断"
+    },
+
+    "resume_token": {
+      "type": ["string", "null"],
+      "description": "resume_enabled=true 时用于中断续答的快照标识"
+    },
+
+    "started_at":   { "type": "string", "format": "date-time" },
+    "terminated_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}
+
+# ------------------------------------------------------------
+# 三、字段与 designplan v1.1 节点对照（便于交叉检查）
+# ------------------------------------------------------------
+# pending_item            ← [ASK] / [GATE-1] 通过后指向下一题
+# confidence              ← [GATE-1 置信度]
+# followup_used           ← max_followups_per_item
+# flagged_low_confidence  ← followup_exhausted_action=skip_and_flag
+# low_confidence_count    ← [GATE-2] 对照 max_low_confidence_items → invalid
+# answered_count          ← [GATE-2] =20 → ready_to_score
+# schema_retries          ← [SCHEMA] 对照 max_schema_retries → handoff
+# crisis_signal/triggered ← [CRISIS CHECK] / [CRISIS]
+# amend_target_item_id    ← [INTENT] 跨题修正
+# turn_count              ← max_total_turns → abandoned
+# score_result            ← [SCORE]，唯一分数来源，供 [REPORT] 读取
+# scale_version/scoring_version ← [INIT] 写入，追溯用

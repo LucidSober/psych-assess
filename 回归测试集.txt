@@ -1,0 +1,200 @@
+# ============================================================
+# 心理测评系统 - 回归测试集 tests.txt
+# version: 1.1（对齐 designplan v1.1 / contracts v1.1 / SDS.txt / SAS.txt）
+# 计分公式：raw X = Σ(所选 option.score)；standard Y = floor(X * 1.25)
+# 全局红线：scoreScale() 内不得出现任何字面数字，cutoff/分段/热线一律读 scale JSON
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 通用断言（所有用例默认继承）
+# ------------------------------------------------------------
+ASSERT-G1  score_result 为系统唯一分数来源，模型输出不含任何分值
+ASSERT-G2  severity_label 必须等于命中 severity_levels[].label 原文
+ASSERT-G3  advice 必须源自命中区间 severity_levels[].advice（模型仅措辞包装不改义）
+ASSERT-G4  standard_score 为 integer，等于 Math.floor(raw_score * 1.25)
+ASSERT-G5  危机判断优先级高于计分与所有闸门
+
+
+# ============================================================
+# A. 计分与分段（TC-SCORE）—— 数据驱动，边界精算
+# ============================================================
+
+# ---- TC-SCORE-01  SDS 无抑郁/轻度临界（标准52 vs 53）----
+# 构造A：正向10题(1,3,4,7,8,9,10,13,15,19)全选 option_no=1
+#        反向题[2,5,6,11,12,14,16,17]选 option_no=2，[18,20]选 option_no=1
+INPUT_A   scale=SDS, 上述组合
+EXPECT_A  raw_score=42, standard_score=52, severity_label="无抑郁"
+# 构造B：在A基础上，反向题仅[2,5,6,11,12,14,16]选2，[17,18,20]选1（其余同A）
+INPUT_B   scale=SDS, 上述组合
+EXPECT_B  raw_score=43, standard_score=53, severity_label="轻度抑郁"
+ASSERT    cutoff=53 来自 psychometrics.norm_cutoff，禁硬编码
+
+# ---- TC-SCORE-02  SDS 中度/重度临界 ----
+EXPECT    raw=50 → standard=62 → "轻度抑郁"；raw=51 → standard=63 → "中度抑郁"
+EXPECT    raw=58 → standard=72 → "中度抑郁"；raw=59 → standard=73 → "重度抑郁"
+
+# ---- TC-SCORE-03  SAS 无焦虑/轻度临界（标准49 vs 50）----
+# SAS reverse_items=[5,9,13,17,19]，正向15题
+# 构造A：正向题中4题选 option_no=2、其余11题选1；反向5题全选 option_no=1
+INPUT_A   scale=SAS, 上述组合
+EXPECT_A  raw_score=39, standard_score=48, severity_label="无焦虑"
+# 构造B：正向题中5题选2、其余10题选1；反向5题全选1
+INPUT_B   scale=SAS, 上述组合
+EXPECT_B  raw_score=40, standard_score=50, severity_label="轻度焦虑"
+ASSERT    cutoff=50 来自 SAS.psychometrics.norm_cutoff
+
+# ---- TC-SCORE-04  SAS 中度/重度临界 ----
+EXPECT    raw=47 → standard=58 → "轻度焦虑"；raw=48 → standard=60 → "中度焦虑"
+EXPECT    raw=55 → standard=68 → "中度焦虑"；raw=56 → standard=70 → "重度焦虑"
+
+# ---- TC-SCORE-05  反向题不做二次反向（高危回归点）----
+# 目的：JSON 中反向题 score 已烘焙，程序只求和
+INPUT     scale=SDS, 第2题(反向)选 option_no=1
+EXPECT    该题计入 score=4（直接取 options[option_no=1].score），不得再 5-x 反向
+ASSERT    scoreScale 仅做 Σoption.score；reverse_items 仅用于与 reverse_scored 一致性校验
+ASSERT    若程序对 reverse 题二次取反 → 本用例必失败
+
+# ---- TC-SCORE-06  全局上下界 ----
+EXPECT    SDS/SAS 全选使 raw=20 → standard=25（区间下界）
+EXPECT    SDS/SAS 全选使 raw=80 → standard=100（区间上界）
+
+# ---- TC-SCORE-07  分段边界归属（闭区间）----
+ASSERT    SDS standard=53 命中 [53,62] 而非 [25,52]（边界含下不含上由 range 定义）
+ASSERT    严重度匹配遍历 severity_levels[].range 命中，命中后即停
+
+
+# ============================================================
+# B. 危机处理（TC-CRISIS）—— 逐量表读 crisis_rule
+# ============================================================
+
+# ---- TC-CRISIS-01  SDS 第19题结构化触发 ----
+INPUT     scale=SDS, 第19题 record_answer(option_no=2)
+EXPECT    实际 score=2 > 1 → 命中 crisis_rule
+ASSERT    status=crisis, crisis_item_hit=true
+ASSERT    旁路常规计分/分段输出，不产出 severity_label
+ASSERT    输出热线取 SDS.crisis_rule.hotline（含 12356 / 010-82951332），非 config 兜底
+
+# ---- TC-CRISIS-02  SDS 第19题不触发边界 ----
+INPUT     scale=SDS, 第19题 option_no=1（score=1）
+EXPECT    score=1 不 >1 → 不触发结构化危机，正常计分
+
+# ---- TC-CRISIS-03  SAS 无结构化触发（防误报）----
+INPUT     scale=SAS, 任意题任意 option_no（含全选 option_no=4）
+EXPECT    crisis_rule=null → 永不触发题目级结构化危机
+ASSERT    禁用任何全局硬阈值对 SAS 误触发
+
+# ---- TC-CRISIS-04  自由文本危机（两量表均生效）----
+INPUT     scale=SAS, 用户自由文本含自伤/轻生表达
+EXPECT    free_text_detection 命中 → crisis_signal=true → status=crisis
+ASSERT    即便 SAS crisis_rule=null，自由文本通道仍生效
+ASSERT    SAS 无自带 hotline → 使用 config.hotline_text_fallback
+
+# ---- TC-CRISIS-05  危机优先级 ----
+INPUT     同一轮同时出现 低置信 + crisis_signal=true
+EXPECT    先走危机分支，halt_on_trigger=true 中断，不再追问/计分
+
+
+# ============================================================
+# C. 闸门与置信度（TC-GATE）
+# ============================================================
+
+# ---- TC-GATE-01  低置信触发追问 ----
+INPUT     record_answer(option_no=3, confidence < confidence_threshold)
+EXPECT    [GATE-1] 不放行，对同题追问，followup_used+1
+ASSERT    pending_item 不变，answered_count 不变
+
+# ---- TC-GATE-02  option_no=null 必追问 ----
+INPUT     record_answer(option_no=null, confidence=0.4)
+EXPECT    触发追问，不落库为有效作答
+
+# ---- TC-GATE-03  追问耗尽 → skip_and_flag ----
+PRE       同题 followup_used 已达 max_followups_per_item
+INPUT     再次仍低置信
+EXPECT    skip_and_flag：answers 追加 {option_no:null, flagged_low_confidence:true}
+ASSERT    low_confidence_count+1，pending_item 推进至下一题
+
+# ---- TC-GATE-04  低置信累计超限 → invalid ----
+PRE       low_confidence_count 即将达 max_low_confidence_items
+INPUT     再触发一次 skip_and_flag
+EXPECT    status=invalid，不进入计分，不出严重度
+ASSERT    报告说明"作答置信不足，结果不予判定"
+
+# ---- TC-GATE-05  20题齐 → ready_to_score ----
+PRE       answered_count=20 且 low_confidence_count 未超限
+EXPECT    [GATE-2] 放行，status=ready_to_score → 触发 [SCORE]
+
+
+# ============================================================
+# D. Schema 校验与安全（TC-SCHEMA）
+# ============================================================
+
+# ---- TC-SCHEMA-01  option_no 越界 ----
+INPUT     record_answer(option_no=5) 或 option_no=0
+EXPECT    output_schema_validation 失败，schema_retries+1，重发
+ASSERT    越界值绝不落库
+
+# ---- TC-SCHEMA-02  item_id 不匹配 pending_item ----
+INPUT     record_answer(item_id ≠ state.pending_item)
+EXPECT    校验失败，拒绝跨题作答
+
+# ---- TC-SCHEMA-03  重试耗尽 → handoff ----
+PRE       schema_retries 达 max_schema_retries
+INPUT     仍校验失败
+EXPECT    status=handoff，转人工，会话保留 resume_token
+
+# ---- TC-SCHEMA-04  缺必填字段 ----
+INPUT     record_answer 缺 confidence/evidence
+EXPECT    校验失败按重试逻辑处理
+
+
+# ============================================================
+# E. 流程与状态机（TC-FLOW）
+# ============================================================
+
+# ---- TC-FLOW-01  超总轮次 → abandoned ----
+PRE       turn_count 达 max_total_turns
+EXPECT    status=abandoned，不计分，提示可凭 resume_token 续答（若启用）
+
+# ---- TC-FLOW-02  跨题修正 amend ----
+PRE       第3题已落库 option_no=2
+INPUT     答第5题时用户称"刚才第3题说错了，应该是经常"
+EXPECT    record_answer(amend_target_item_id="3")，[INTENT] 重定位回第3题
+ASSERT    第3题 answer 被覆盖更新，answered_count 不重复计数
+
+# ---- TC-FLOW-03  注入窗口隔离 ----
+ASSERT    每轮仅注入 pending_item + 最近 history_window_turns 轮
+ASSERT    模型上下文中不出现全量 answers / score_result（计分前）
+
+# ---- TC-FLOW-04  续答一致性 ----
+PRE       resume_enabled=true，中断后凭 resume_token 恢复
+EXPECT    answers/answered_count/low_confidence_count 与中断前一致，pending_item 续上
+
+
+# ============================================================
+# F. 数据驱动正确性（TC-DATADRIVEN）—— 防硬编码
+# ============================================================
+
+# ---- TC-DD-01  换量表不改代码 ----
+ACTION    仅替换 scale JSON（SDS↔SAS），不改 scoreScale 代码
+EXPECT    cutoff/分段/题数/热线/危机规则全部随 JSON 自动切换正确
+
+# ---- TC-DD-02  篡改 JSON 数字即变结果 ----
+ACTION    临时将 SAS norm_cutoff 改 50→55 并相应调 severity range
+EXPECT    临界用例结果随之改变，证明无任何字面数字硬编码于程序
+
+# ---- TC-DD-03  option_no 上界源自 JSON ----
+ASSERT    当前 Schema maximum=4 与两量表一致；
+          注释保留：未来非4级量表须改为从 scale JSON 动态读取上界
+
+
+# ------------------------------------------------------------
+# 覆盖矩阵（节点 → 用例）
+# ------------------------------------------------------------
+# [SCORE]            → TC-SCORE-01~07, TC-DD-01~02
+# [CRISIS CHECK]     → TC-CRISIS-01~05
+# [GATE-1 置信度]     → TC-GATE-01~03
+# [GATE-2 完成度]     → TC-GATE-04~05
+# [SCHEMA]           → TC-SCHEMA-01~04
+# [INTENT 修正]       → TC-FLOW-02
+# 状态机终态          → invalid/crisis/abandoned/handoff/completed 均有覆盖

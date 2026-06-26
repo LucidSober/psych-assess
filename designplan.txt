@@ -1,0 +1,150 @@
+# ============================================================
+# 心理测评系统 - 设计计划 designplan.txt
+# version: 1.1
+# 变更：补齐工程闭环（终态节点 / 输入安全 / 危机上报 / REPORT护栏 /
+#       跨题修正 / 异常处理 / 量表版本）；合规与数据治理另文处理
+# ============================================================
+
+# ------------------------------------------------------------
+# 一、全链路流程（节点 + 分支 + 全部终态）
+# ------------------------------------------------------------
+
+[INIT] 选定 scale_id，加载 scale JSON + config，初始化 state
+       记录 scale_version / scoring_version 入 state（便于追溯）
+   ↓
+[ASK] 大模型把第 pending_item 的题干转成口语问法，问用户
+   │   ※ 仅注入当前题 + 最近 history_window_turns 轮，禁全表注入
+   ↓
+[GUARD] 输入安全与长度闸（代码层，先于模型）
+   │   ├─ 超 max_user_input_chars ────────────→ [CLARIFY]
+   │   ├─ 命中注入特征 & reject_and_clarify ───→ [CLARIFY]
+   │   └─ 命中注入特征 & sanitize ────→ 转义后继续
+   ↓ （正常 / 已转义，用 input_delimiter 包裹）
+[INTENT] 跨题修正识别
+   │   └─ 用户要修改此前某题 → 回 [ASK] 定位该题重作（修正不计入追问次数）
+   ↓ （非修正）
+[MAP] 大模型调用 record_answer 输出 {item_id, option_no, confidence, evidence}
+   ↓
+[SCHEMA] 输出 Schema 校验（option_no∈合法集 等）
+   │   ├─ 失败 & retries<max_schema_retries → 重生成（retries+1）
+   │   └─ 失败 & 重试耗尽 ───────────────────→ [HUMAN_HANDOFF]
+   ↓ （通过）
+[CRISIS CHECK] 并行，优先级最高（结构化得分>阈值 OR 自由文本自伤信号）
+   │   └─ 命中 → [CRISIS] 旁路
+   ↓ （未命中）
+[GATE-1 置信度] confidence<threshold 或 null
+   │   ├─ 是 & followups<max_followups_per_item → 回 [ASK] 追问同题
+   │   └─ 是 & 追问耗尽：
+   │         · followup_exhausted_action=skip_and_flag → 标记低置信，落库
+   │         · followup_exhausted_action=transfer_human → [HUMAN_HANDOFF]
+   ↓ （通过 / 已 skip_and_flag）落库，pending 指向下一题
+[GATE-2 完整性]
+   │   ├─ low_confidence_count > max_low_confidence_items → [INVALID]
+   │   ├─ answered_count < 题数 → 回 [ASK]
+   │   └─ answered_count = 题数 → status=ready_to_score
+   ↓
+[SCORE] 调用确定性 scoreScale()，仅此处产生分数
+   ↓
+[REPORT] 大模型把 {standard, severity, advice_template} 包装成共情反馈
+         ※ advice 取自预设库，模型仅做措辞，禁止自行下临床诊断/医疗建议
+
+# ---------- 旁路与终态 ----------
+
+[CLARIFY]   温和澄清（降级，不截断）→ 回 [ASK] 同题
+[CRISIS]    共情话术 + hotline_text；halt_on_trigger=true 则中断后续题；
+            crisis_escalation=true 时同步触发真人告警/上报 → 终态 status=crisis
+[ABANDON]   会话超 session_timeout_sec 或超 max_total_turns → 终态 status=abandoned
+[INVALID]   低置信题超限 → 终态 status=invalid（不出分，提示重测）
+[HUMAN_HANDOFF] 转人工接管 → 终态 status=handoff（携带 state 快照）
+
+# ---------- 横切：异常处理 ----------
+模型 API 超时/失败：按 api_max_retries 重试；耗尽 → [HUMAN_HANDOFF]
+
+
+# ============================================================
+# 二、大模型层运行配置
+# ============================================================
+
+# ---------- 上下文限制 ----------
+context:
+  max_user_input_chars: 500          # 300-800；低数字素养人群放宽至 700
+  history_window_turns: 3            # 1-4；用于跨题修正，过大稀释注意力
+  inject_full_scale: false           # 安全开关，禁改
+  system_prompt_token_budget: 800    # 400-1200
+  total_context_token_soft_cap: 4000 # 约为模型窗口的 60%
+
+# ---------- 模型输出限制 ----------
+output:
+  max_tokens: 256                    # 150-400；共情反馈可放宽
+  temperature: 0.2                   # 0.0-0.5；映射任务建议低温
+
+# ---------- 闸门：置信度与完整性 ----------
+gates:
+  confidence_threshold: 0.70         # 0.6-0.85
+  max_followups_per_item: 3          # 2-4
+  followup_exhausted_action: skip_and_flag  # skip_and_flag | transfer_human
+  max_low_confidence_items: 2        # 0-3；超限走 [INVALID]
+
+# ---------- 危机旁路 ----------
+crisis:
+  enabled: true                      # 禁关
+  # 结构化触发：不使用全局阈值，逐量表读取 scale JSON 的 crisis_rule / is_crisis_item
+  #   SDS → 第19题 option_no>=2 触发；SAS → crisis_rule=null，无题目级触发
+  structured_trigger_source: scale_json   # 禁改为硬编码阈值
+  free_text_detection: true
+  free_text_detector: classifier
+  halt_on_trigger: true
+  crisis_escalation: true
+  escalation_target: "ops_alert_webhook"
+  # 热线优先取 scale JSON 的 crisis_rule.hotline；JSON 无则用下方兜底
+  hotline_text_fallback: "全国24小时心理援助热线 400-161-9995；如有紧急危险请拨打 120"
+
+# ---------- 输入安全 ----------
+security:
+  injection_detection: true
+  injection_action: reject_and_clarify   # sanitize | reject_and_clarify
+  input_delimiter: "<<<USER_INPUT>>>"
+  output_schema_validation: true
+  max_schema_retries: 2                  # 耗尽 → [HUMAN_HANDOFF]
+
+# ---------- 会话与量表 ----------
+session:
+  active_scale_id: "SDS"
+  session_timeout_sec: 1200          # 600-1800；超时 → [ABANDON]
+  max_total_turns: 80                # 防死循环；超限 → [ABANDON]
+  # 【新增】会话中断后是否允许凭快照续答
+  resume_enabled: true
+
+# ---------- 终态定义 ----------
+# 【新增】显式枚举所有会话终态，便于内核状态机与埋点对齐
+terminal_states:
+  completed: "正常完成并出报告"
+  crisis:    "命中危机，中断"
+  invalid:   "低置信超限，不出分"
+  abandoned: "超时或超轮次"
+  handoff:   "转人工接管"
+
+# ---------- REPORT 护栏 ----------
+# 【新增】约束模型在反馈环节不得越界
+report:
+  advice_from_template: true         # advice 取自预设库，模型仅措辞包装
+  forbid_clinical_diagnosis: true    # 禁止模型自行下诊断/给医疗建议
+  must_include_disclaimer: true      # 反馈须含“筛查非诊断，结果不替代就医”
+
+# ---------- 异常处理 ----------
+# 【新增】模型/工具调用失败的统一降级
+resilience:
+  api_max_retries: 2                 # 耗尽 → [HUMAN_HANDOFF]
+  api_timeout_sec: 20
+
+# ---------- 版本与可观测性 ----------
+versioning:
+  # 【新增】记录用哪版量表与算法计分，写入每条会话记录
+  scale_version: "SDS-v1"
+  scoring_version: "score-v1"
+
+observability:
+  log_evidence: true                 # 存原话片段供审计（数据治理另文约束）
+  log_confidence: true
+  # 【新增】记录每次会话的终态分布，监控 invalid/abandon/handoff 异常率
+  log_terminal_state: true

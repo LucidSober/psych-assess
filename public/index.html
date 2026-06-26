@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心理测评</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100">
+<div class="max-w-2xl mx-auto flex flex-col h-screen">
+  <header class="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0">
+    <div>
+      <h1 class="font-semibold text-slate-800" id="scaleName">心理测评</h1>
+      <p class="text-xs text-slate-500">情绪筛查 · 非医学诊断</p>
+    </div>
+    <div class="text-xs text-slate-500 font-mono" id="progress"></div>
+  </header>
+
+  <main id="messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3"></main>
+
+  <div id="banner" class="hidden px-4 py-3 text-sm text-center shrink-0"></div>
+
+  <footer class="bg-white border-t p-3 shrink-0">
+    <div class="flex gap-2">
+      <input id="input" type="text" autocomplete="off"
+        class="flex-1 border border-slate-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        placeholder="用自己的话描述最近的感受…" />
+      <button id="send"
+        class="bg-indigo-600 text-white rounded-full px-5 py-2 text-sm font-medium disabled:opacity-40">发送</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+let sessionId = null, busy = false;
+const $ = id => document.getElementById(id);
+const messagesEl = $('messages'), inputEl = $('input'), sendBtn = $('send');
+// 页面加载时查询并显示当前模式
+fetch('/api/health')
+  .then(r => r.json())
+  .then(info => {
+    const bar = document.getElementById('mode-bar');
+    if (!bar) return;
+    if (info.use_deepseek) {
+      bar.textContent = '● 模式：DeepSeek（可自然语言作答）';
+      bar.style.color = '#2e7d32';
+    } else {
+      bar.textContent = '● 模式：本地 stub（未检测到 API key，请用数字作答）';
+      bar.style.color = '#c62828';
+    }
+  });
+
+function addMsg(text, who) {
+  const wrap = document.createElement('div');
+  wrap.className = who === 'user' ? 'flex justify-end' : 'flex justify-start';
+  const b = document.createElement('div');
+  b.className = (who === 'user'
+    ? 'bg-indigo-600 text-white'
+    : 'bg-white text-slate-800 border border-slate-200')
+    + ' rounded-2xl px-4 py-2 text-sm max-w-xs sm:max-w-md whitespace-pre-wrap shadow-sm';
+  b.textContent = text;
+  wrap.appendChild(b);
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+function typing(on) {
+  let t = $('typing');
+  if (on && !t) {
+    t = document.createElement('div');
+    t.id = 'typing'; t.className = 'flex justify-start';
+    t.innerHTML = '<div class="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm flex gap-1">'
+      + '<span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>'
+      + '<span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay:.15s"></span>'
+      + '<span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay:.3s"></span></div>';
+    messagesEl.appendChild(t);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  } else if (!on && t) { t.remove(); }
+}
+
+const TERMINAL = {
+  completed: ['bg-emerald-50 text-emerald-700', '测评已完成 ✓'],
+  crisis:    ['bg-red-50 text-red-700', '已转入危机关怀,测评中断'],
+  invalid:   ['bg-amber-50 text-amber-700', '多题无法确认,本次不计分'],
+  abandoned: ['bg-slate-100 text-slate-600', '会话已结束(超时)'],
+  handoff:   ['bg-amber-50 text-amber-700', '已为你转接人工'],
+};
+function lock(status) {
+  inputEl.disabled = sendBtn.disabled = true;
+  inputEl.placeholder = '会话已结束';
+  const t = TERMINAL[status];
+  if (t) {
+    const banner = $('banner');
+    banner.className = 'px-4 py-3 text-sm text-center shrink-0 ' + t[0];
+    banner.textContent = t[1];
+    banner.classList.remove('hidden');
+  }
+}
+
+async function start() {
+  try {
+    const res = await fetch('/api/session', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || '建会话失败');
+    sessionId = d.session_id;
+    $('scaleName').textContent = d.scale_name || '心理测评';
+    $('progress').textContent = '0 / ' + d.total_items;
+    addMsg(d.reply, 'bot');
+  } catch (e) { addMsg('无法连接服务器:' + e.message, 'bot'); }
+}
+
+async function send() {
+  const text = inputEl.value.trim();
+  if (!text || busy || !sessionId) return;
+  busy = true; sendBtn.disabled = true;
+  addMsg(text, 'user'); inputEl.value = ''; typing(true);
+  try {
+    const res = await fetch(`/api/session/${sessionId}/turn`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const d = await res.json();
+    typing(false);
+    if (!res.ok) { addMsg('出错了:' + (d.error || res.status), 'bot'); }
+    else {
+      addMsg(d.reply, 'bot');
+      if (d.answered_count != null) $('progress').textContent = d.answered_count + ' / ' + d.total_items;
+      if (d.status !== 'in_progress') lock(d.status);
+    }
+  } catch (e) { typing(false); addMsg('网络错误:' + e.message, 'bot'); }
+  finally {
+    busy = false;
+    if (!inputEl.disabled) sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+
+sendBtn.onclick = send;
+inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+start();
+</script>
+</body>
+</html>

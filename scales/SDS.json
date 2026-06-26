@@ -1,0 +1,295 @@
+{
+  "meta": {
+    "scale_id": "SDS",
+    "scale_name": "抑郁自评量表",
+    "english_name": "Self-Rating Depression Scale",
+    "author": "Zung W.W.K. (1965)",
+    "norm_source": "中国常模，王春芳等(1986)，张明园《精神科评定量表手册》",
+    "target_population": "具有抑郁症状的成年人及需进行抑郁状态筛查的人群",
+    "timeframe": "最近一周内",
+    "total_items": 20,
+    "item_score_range": [1, 4],
+    "instruction": "请根据您最近一周的实际感受，选择最符合的频率。每题只选一项，依据症状出现的天数判断。",
+    "item_phrasing_mode": "use_question_field",
+    "phrasing_note": "本量表题目为陈述句，出题时应优先使用每题的 question 字段进行自然口语化提问，不要套用『XX这种感受出现得多吗』模板；用户表示看不懂时使用 plain_desc 解释。"
+  },
+  "option_frequency_anchor": {
+    "1": "没有或很少时间（≤1天/周）",
+    "2": "小部分时间（1-2天/周）",
+    "3": "相当多时间（3-4天/周）",
+    "4": "绝大部分或全部时间（5-7天/周）"
+  },
+  "items": [
+    {
+      "item_id": 1, "text": "我觉得闷闷不乐，情绪低沉",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是常常心情低落、高兴不起来",
+      "question": "你最近一周，是不是常常觉得心情低落、提不起劲？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 2, "text": "我觉得一天之中早晨最好",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你最近早上的状态是不是一天里最好的时候（有些人会觉得越到晚上心情越沉，这题就是想了解这个）",
+      "question": "你最近一周，是不是会觉得早上的状态比一天里其他时候要好一些？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 3, "text": "我一阵阵哭出来或觉得想哭",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是容易想哭，或者会忍不住哭出来",
+      "question": "你最近一周，有没有一阵阵地想哭，或者忍不住哭出来？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 4, "text": "我晚上睡眠不好",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近晚上睡得好不好，比如难入睡、易醒、睡不踏实",
+      "question": "你最近一周，晚上睡得怎么样？有没有睡不好的情况？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 5, "text": "我吃得跟平常一样多",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你最近的胃口和饭量，跟平时比有没有变化",
+      "question": "你最近一周的胃口怎么样？吃东西的量跟平时比，差不多还是变少了？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 6, "text": "我与异性密切接触时和以往一样感到愉快",
+      "reverse_scored": true, "is_crisis_item": false,
+      "conditional": true,
+      "neutral_option": 4,
+      "na_hint": "若用户表示近期没有此类接触/情境不适用，按『和以往一样愉快』计（option 4），不追问频率",
+      "plain_desc": "就是问你和异性相处的时候，那种愉快的感觉跟以前比有没有变化。如果最近没有这种接触，告诉我一声就行，我们跳过它",
+      "question": "你最近和异性相处的时候，感觉还跟以前一样愉快吗？（如果最近没有这种接触，跟我说一下就行）",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 7, "text": "我发觉我的体重在下降",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有感觉自己变瘦了、体重在往下掉",
+      "question": "你最近一周，有没有觉得自己体重在往下掉、人变瘦了？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 8, "text": "我有便秘的苦恼",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有便秘、排便不顺的困扰",
+      "question": "你最近一周，有没有便秘、排便不太顺畅的情况？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 9, "text": "我心跳比平常快",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有感觉心跳比平时快、心慌",
+      "question": "你最近一周，有没有觉得心跳比平时快，或者有点心慌？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 10, "text": "我无缘无故地感到疲乏",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是没干什么、也没什么原因，却觉得很累很乏",
+      "question": "你最近一周，有没有那种没什么特别原因、却觉得特别累的时候？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 11, "text": "我的头脑跟平常一样清楚",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你最近脑子是不是还跟平时一样清醒、好使，有没有觉得发懵、转不动",
+      "question": "你最近一周，脑子是不是还跟平常一样清楚？有没有觉得发懵、反应慢？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 12, "text": "我觉得经常做的事情并没有困难",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你做那些平时熟悉、常做的事，是不是还跟以前一样顺手，有没有变得吃力",
+      "question": "你最近一周，做平时常做的那些事，还顺手吗？有没有觉得比以前吃力？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 13, "text": "我觉得不安而平静不下来",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是心里发慌、坐立不安，静不下来",
+      "question": "你最近一周，有没有觉得心里不安、坐立难安、静不下来？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 14, "text": "我对将来抱有希望",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你最近对以后的日子是不是还抱有希望、有盼头",
+      "question": "你最近一周，对将来还抱有希望、有盼头吗？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 15, "text": "我比平常容易生气激动",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是比平时更容易生气、烦躁、激动",
+      "question": "你最近一周，是不是比平时更容易生气、烦躁或激动？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 16, "text": "我觉得作出决定是容易的",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你最近拿主意、做决定是不是还跟以前一样容易，有没有变得犹豫不决",
+      "question": "你最近一周，做决定、拿主意还容易吗？有没有变得特别犹豫？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 17, "text": "我觉得自己是个有用的人，有人需要我",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是还觉得自己有价值、被人需要",
+      "question": "你最近一周，是不是还觉得自己是个有用的人、有人需要你？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 18, "text": "我的生活过得很有意思",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是还觉得日子过得有意思、有滋味",
+      "question": "你最近一周，觉得日子过得有意思吗？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    },
+    {
+      "item_id": 19, "text": "我认为如果我死了，别人会生活得好些",
+      "reverse_scored": false, "is_crisis_item": true,
+      "plain_desc": "这是一个比较重的问题，就是想了解你最近有没有冒出过『自己不在了，别人会更好』这样的念头",
+      "question": "接下来这个问题有点重，但请你如实告诉我——你最近一周，有没有冒出过『如果我不在了，别人会过得更好』这样的念头？",
+      "crisis_question": "我想认真地问你一件事，你怎么回答都没关系：最近一周，你有没有出现过『不如不在了』或者『我死了别人会更好』这样的想法？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 1},
+        {"option_no": 2, "label": "小部分时间", "score": 2},
+        {"option_no": 3, "label": "相当多时间", "score": 3},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 4}
+      ]
+    },
+    {
+      "item_id": 20, "text": "平常感兴趣的事我仍然照样感兴趣",
+      "reverse_scored": true, "is_crisis_item": false,
+      "plain_desc": "就是问你以前喜欢、感兴趣的事，现在是不是还提得起兴趣",
+      "question": "你最近一周，以前感兴趣的那些事，现在还提得起兴趣吗？",
+      "options": [
+        {"option_no": 1, "label": "没有或很少时间", "score": 4},
+        {"option_no": 2, "label": "小部分时间", "score": 3},
+        {"option_no": 3, "label": "相当多时间", "score": 2},
+        {"option_no": 4, "label": "绝大部分或全部时间", "score": 1}
+      ]
+    }
+  ],
+  "reverse_items": [2, 5, 6, 11, 12, 14, 16, 17, 18, 20],
+  "conditional_items": [6],
+  "scoring": {
+    "step1_raw": "粗分 X = 各题 options.score 之和",
+    "step2_standard": "标准分 Y = Math.floor(X * 1.25)",
+    "raw_range": [20, 80],
+    "standard_range": [25, 100]
+  },
+  "severity_levels": [
+    {"range": [25, 52],  "label": "无抑郁",   "advice": "标准分<53，无明显抑郁情绪，建议保持。"},
+    {"range": [53, 62],  "label": "轻度抑郁", "advice": "53-62分，轻度抑郁，建议自我调节并关注情绪变化。"},
+    {"range": [63, 72],  "label": "中度抑郁", "advice": "63-72分，中度抑郁，建议寻求专业心理咨询。"},
+    {"range": [73, 100], "label": "重度抑郁", "advice": "≥73分，重度抑郁，强烈建议尽快就医评估。"}
+  ],
+  "crisis_rule": {
+    "item_id": 19,
+    "trigger": "第19题实际得分 > 1（即用户选项 ≥ 2）",
+    "action": "立即旁路常规计分流程，弹出危机干预热线并发出高优警报",
+    "hotline": "全国心理援助热线 12356；北京心理危机研究与干预中心 010-82951332"
+  },
+  "psychometrics": {
+    "reliability": "Cronbach's α≈0.864，分半与重测信度>0.8",
+    "validity": "与HAM-D效标关联良好",
+    "norm_cutoff": 53,
+    "note": "总分仅供参考，不取代临床访谈诊断；重度精神运动阻滞患者自评困难，应在指导下进行。"
+  },
+  "disclaimer": "本量表为情绪筛查工具，结果不构成医学诊断，不能替代精神科或心理科医生的临床评估。"
+}
