@@ -133,17 +133,7 @@ function escalate(ctx) {
 
 // 报告生成：advice 默认用 JSON 原文；若注入 ctx.adviceFn（如 DeepSeek），
 // 则由模型对 advice 做共情措辞包装。分数/标签/免责声明/存疑题号永远不交给模型。
-async function buildReport(ctx, r) {
-  let advice = r.advice;
-  if (ctx.adviceFn) {
-    try {
-      const wrapped = await ctx.adviceFn(ctx, r);
-      if (wrapped && typeof wrapped === 'string' && wrapped.trim())
-        advice = wrapped.trim();
-    } catch (e) {
-      console.warn(`[buildReport] advice 包装降级，用原文: ${e.message}`);
-    }
-  }
+
 // 终态文案统一出口：分数行 + 存疑题点名 + 免责声明，三段都写死，绝不交给模型
 function flaggedNote(state) {
   const ids = flaggedItemIds(state);
