@@ -1,0 +1,209 @@
+{
+  "$schema_version": "1.1",
+  "meta": {
+    "description": "信号词典:把日常对话里的措辞映射到现有量表维度。供 src/daily/extractor 粗筛、供 src/daily/mapper 作为合法维度约束(allow-list)。",
+    "time_window": "最近两周",
+    "dimension_id_convention": {
+      "format": "<scale_id>_item<item_id>",
+      "source": "scale_id 与整数 item_id 均直接取自 src/scales/<scale>.json,id 由二者机械拼接,可反解回 (scale, item_id)。",
+      "examples": { "PHQ9_item3": ["PHQ9", 3], "GAD7_item1": ["GAD7", 1] },
+      "note": "label 字段只给人看/给 reporter 用,不参与 id,改 label 不影响匹配。"
+    },
+    "boundaries": [
+      "本文件不负责危机识别。危机词条硬编码在 src/daily/crisis,享最高优先级,绝不从本文件读取。",
+      "PHQ9_item9 被刻意排除:真实文件里它 is_crisis_item=true,crisis_rule 为 item_9.score>=1,任何相关信号一律走 crisis 旁路,不进聚合、不进本文件。",
+      "GAD7 的 crisis_rule 为 null,没有危机条目;危机通道只认 PHQ9_item9。",
+      "valence: negative=朝症状方向 / positive=反向或好转 / ambiguous=措辞模糊,交给 mapper 的 LLM 细筛定夺。"
+    ],
+    "matching_contract": {
+      "engine": "patterns 为 JS 正则源串,extractor 用 new RegExp(p, 'iu') 运行",
+      "normalize": "匹配前建议:全角转半角、去多余空白;中文不用 \\b 词边界",
+      "role": "粗筛只决定'这句话可能涉及哪个维度';强度/置信度一律由 mapper 的 LLM 复核,intensity_prior 仅作先验提示"
+    }
+  },
+
+  "config": {
+    "enabled": true,
+    "min_pattern_len": 2,
+    "comment": "可整体开关,或给单条 signal 加 \"enabled\": false 停用而不删除。"
+  },
+
+  "dimensions": {
+    "PHQ9_item1": {
+      "scale": "PHQ9", "item_id": 1, "label": "兴趣/愉悦感",
+      "scale_item_text": "做事时提不起劲或没有兴趣",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "anhedonia_no_interest",
+          "patterns": ["(什么|啥|事)?都?(提不起|没)(兴趣|劲头|劲)", "干啥都(没意思|无所谓)", "(以前|本来)(喜欢|爱).{0,8}(现在|如今).{0,4}(不想|没|懒得|提不起)", "麻木"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "对原本感兴趣的事失去兴趣/愉悦" },
+        { "id": "anhedonia_recovered",
+          "patterns": ["又(开始|想)(喜欢|玩|做)", "重新有了?兴趣", "终于又想"],
+          "valence": "positive", "intensity_prior": 1, "evidence_hint": "兴趣/愉悦感回升,反向信号" }
+      ]
+    },
+
+    "PHQ9_item2": {
+      "scale": "PHQ9", "item_id": 2, "label": "情绪低落",
+      "scale_item_text": "感到心情低落、沮丧或绝望",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "mood_low",
+          "patterns": ["(很|好|特别)?(难受|低落|丧|down)", "(高兴|开心)不起来", "(想哭|一直哭|哭了)", "情绪很?(差|糟)", "空落落"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "情绪低落/难过/想哭/空虚" },
+        { "id": "mood_hopeless",
+          "patterns": ["(没)?(希望|盼头)", "(以后|未来).{0,4}(没意义|算了)", "(怎么|再怎么)努力都(没用|一样)"],
+          "valence": "negative", "intensity_prior": 3, "evidence_hint": "无望感(仅情绪层面;若含轻生意图归 crisis,不在此处)" }
+      ]
+    },
+
+    "PHQ9_item3": {
+      "scale": "PHQ9", "item_id": 3, "label": "睡眠",
+      "scale_item_text": "入睡困难、睡不安稳或睡得过多",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "sleep_early_waking",
+          "patterns": ["凌晨.{0,4}(就|才)?醒", "(三|四)点.{0,4}醒", "天没亮就醒", "醒了就睡不(着|回去)"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "早醒/醒后难再入睡" },
+        { "id": "sleep_onset_or_quality",
+          "patterns": ["睡不(着|好|沉|踏实)", "失眠", "整(夜|宿)(没睡|睡不着)", "翻来覆去", "一直做梦"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "入睡困难/睡眠浅/多梦" },
+        { "id": "sleep_hypersomnia",
+          "patterns": ["怎么睡都(累|不够)", "睡一整天", "一直(犯困|困|想睡)", "白天.{0,4}(犯困|没精神)"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "睡得过多/睡不够(item3 双向)" },
+        { "id": "sleep_good",
+          "patterns": ["睡得(挺|还|很)(好|香)", "(一觉|终于)睡到天亮"],
+          "valence": "positive", "intensity_prior": 1, "evidence_hint": "睡眠改善,反向信号" }
+      ]
+    },
+
+    "PHQ9_item4": {
+      "scale": "PHQ9", "item_id": 4, "label": "精力/疲劳",
+      "scale_item_text": "感觉疲倦或没有活力",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "fatigue_low_energy",
+          "patterns": ["(好|很|特别)?累", "没(力气|精力|劲)", "(身体)?被掏空", "提不起精神", "动一下都(费劲|喘)"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "持续疲乏/精力不足" }
+      ]
+    },
+
+    "PHQ9_item5": {
+      "scale": "PHQ9", "item_id": 5, "label": "食欲/体重",
+      "scale_item_text": "食欲缺乏或吃太多",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "appetite_loss",
+          "patterns": ["(不想|没胃口|懒得)吃", "(吃|咽)不下", "一天没(吃|进食)", "瘦了好多"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "食欲下降/进食减少" },
+        { "id": "appetite_overeat",
+          "patterns": ["停不下来一直吃", "暴(饮暴食|食)", "胖了好多"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "食欲亢进/暴食(item5 双向)" }
+      ]
+    },
+
+    "PHQ9_item6": {
+      "scale": "PHQ9", "item_id": 6, "label": "自我评价/内疚",
+      "scale_item_text": "觉得自己很糟,或觉得自己很失败,或让自己、家人失望",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "worthlessness_self_blame",
+          "patterns": ["(都是)?我的错", "我(就是|真|太)(没用|废物|失败|差劲)", "拖累(别人|大家)", "(觉得)?自己(不配|多余)"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "自责/无价值感(不含轻生意图;含则归 crisis)" }
+      ]
+    },
+
+    "PHQ9_item7": {
+      "scale": "PHQ9", "item_id": 7, "label": "注意力",
+      "scale_item_text": "对事物专注有困难,例如看报纸或看电视时",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "concentration_impaired",
+          "patterns": ["没法(集中|专注)", "(走神|发呆|分心)", "看(书|不进去)", "脑子(转不动|一片(空白|浆糊))", "记不住事"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "注意力/记忆力下降" }
+      ]
+    },
+
+    "PHQ9_item8": {
+      "scale": "PHQ9", "item_id": 8, "label": "迟滞/激越",
+      "scale_item_text": "行动或说话速度缓慢到别人已经察觉,或刚好相反,变得比平日更烦躁或坐立不安、动来动去",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "psychomotor_retardation",
+          "patterns": ["(动作|反应)(变)?慢", "(说话|做事)都(慢|没力)", "整个人(卡住|停滞)"],
+          "valence": "negative", "intensity_prior": 1, "evidence_hint": "动作/言语迟缓" },
+        { "id": "psychomotor_agitation",
+          "patterns": ["坐不住", "(心)?烦躁得(很|不行)", "停不下来(来回)?走"],
+          "valence": "negative", "intensity_prior": 1, "evidence_hint": "坐立不安/激越(item8 双向)" }
+      ]
+    },
+
+    "GAD7_item1": {
+      "scale": "GAD7", "item_id": 1, "label": "紧张/焦虑",
+      "scale_item_text": "感觉紧张、焦虑或不安",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "nervous_on_edge",
+          "patterns": ["(很|好|一直)?(紧张|焦虑|慌)", "(心)?揪着", "提心吊胆", "心慌"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "紧张不安/焦虑感" }
+      ]
+    },
+
+    "GAD7_item2": {
+      "scale": "GAD7", "item_id": 2, "label": "担忧失控",
+      "scale_item_text": "无法停止或控制担忧",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "worry_uncontrolled",
+          "patterns": ["停不下来(地)?(想|担心)", "(脑子里)?(一直|反复)(想|过)", "控制不住(担心|去想)", "胡思乱想"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "无法控制的担忧/反刍" }
+      ]
+    },
+
+    "GAD7_item3": {
+      "scale": "GAD7", "item_id": 3, "label": "过度担心",
+      "scale_item_text": "对各种事情担心太多",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "worry_excessive",
+          "patterns": ["什么都(要|得)?(操心|担心)", "(大小事|啥事)都(放不下|揪心)", "操心太多"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "担忧范围广/操心过多" }
+      ]
+    },
+
+    "GAD7_item4": {
+      "scale": "GAD7", "item_id": 4, "label": "难以放松",
+      "scale_item_text": "难以放松",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "cannot_relax",
+          "patterns": ["放松不(了|下来)", "一直(绷|紧)着", "松不下来", "没法(歇|停)"],
+          "valence": "negative", "intensity_prior": 1, "evidence_hint": "难以松弛/持续紧绷" }
+      ]
+    },
+
+    "GAD7_item6": {
+      "scale": "GAD7", "item_id": 6, "label": "易怒",
+      "scale_item_text": "变得容易生气或急躁",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "irritable",
+          "patterns": ["(一点小事)?就(炸|火大|烦)", "(特别)?易怒", "看谁都(不顺眼|烦)", "(忍不住)?发脾气"],
+          "valence": "negative", "intensity_prior": 1, "evidence_hint": "易激惹/烦躁" }
+      ]
+    },
+
+    "GAD7_item7": {
+      "scale": "GAD7", "item_id": 7, "label": "不祥预感",
+      "scale_item_text": "感觉害怕,好像有可怕的事情要发生一样",
+      "default_valence": "negative",
+      "signals": [
+        { "id": "impending_dread",
+          "patterns": ["总觉得(要|会)出事", "(隐隐|莫名)(害怕|不安)", "好像有(坏|不好的)事(要)?发生", "心里发毛"],
+          "valence": "negative", "intensity_prior": 2, "evidence_hint": "不祥预感/莫名恐惧" }
+      ]
+    }
+  },
+
+  "_overlap_note_TODO": "GAD7_item5(坐立不安)与 PHQ9_item8 的激越方向语义重叠;若也纳入,需在 aggregator 里按 scale 分桶,避免同一句话被跨量表双倍计权。SAS/SDS 同理。"
+}
