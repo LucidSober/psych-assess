@@ -213,4 +213,4 @@ async function deepseekReply(ctx, situation) {
   return content.trim();
 }
 
-module.exports = { deepseekMap, deepseekAdvice, deepseekReply, callDeepSeek };
+module.exports = { deepseekMap, deepseekAdvice, deepseekReply };
