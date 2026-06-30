@@ -30,8 +30,8 @@ module.exports = function dailyRoutes({ useDeepseek = false } = {}) {
       const reply = useDeepseek ? await deepseekDailyReply(messages) : cannedDailyReply();
       res.json({ crisis: false, reply: reply || cannedDailyReply() });
     } catch (e) {
-      console.warn('[daily/reply] 降级:', e.message);
-      res.json({ crisis: false, reply: cannedDailyReply() }); // 永不崩
+      console.error('[daily/reply] 调用失败:', e.message);
+      res.json({ crisis: false, reply: '【调试】DeepSeek 调用失败:' + e.message });
     }
   });
 
