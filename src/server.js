@@ -7,6 +7,7 @@ const config = require('./config');
 const { processTurn, startSession } = require('./engine');
 const { deepseekMap, deepseekAdvice, deepseekReply } = require('./llmDeepSeek');
 const { stubMap } = require('./llmStub');
+const dailyRoutes = require('./daily/routes'); // 新增:被动日报路由
 
 const app = express();
 app.use(express.json());
@@ -46,6 +47,9 @@ function modeInfo() {
       : '当前为本地 stub 模式（未检测到 API key），请用数字作答；自然语言无法被理解。',
   };
 }
+
+// ---- 新增:今日小结(被动分析)路由 ----
+app.use('/api/daily', dailyRoutes({ useDeepseek: USE_DEEPSEEK }));
 
 // ---- 健康检查：前端可随时查当前模式 ----
 app.get('/api/health', (req, res) => {
