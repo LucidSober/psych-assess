@@ -84,7 +84,6 @@ async function deepseekMap(ctx, raw) {
       '- confidence：映射把握程度，不确定时给低值（<0.5）。',
       '- crisis_signal：用户表达自杀/自伤/不想活等危机信号时 true，否则 false。',
       '- amend_target_item_id：用户明确想修改之前第N题时填该题号字符串（如"3"），否则 null。',
-      '- 你只做映射，不做诊断、不安慰、不输出选项以外的任何解读。',
     ].join('\n');
     const user = [
       `当前题目(第${pending}题)：${item ? item.text : ''}`,
