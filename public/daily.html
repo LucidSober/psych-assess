@@ -76,7 +76,7 @@
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('input');
 const convo = []; // [{role, content}]
-const ACKS = ['嗯,我在听。', '谢谢你愿意说这些。', '我记下了,继续说。', '辛苦了。还有吗?'];
+//const ACKS = ['嗯,我在听。', '谢谢你愿意说这些。', '我记下了,继续说。', '辛苦了。还有吗?'];
 
 document.getElementById('agreeBtn').onclick = () => {
   document.getElementById('consentView').style.display = 'none';
@@ -94,14 +94,43 @@ function addMsg(text, who, extra) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+//function send() {
+//  const text = inputEl.value.trim();
+//  if (!text) return;
+  //addMsg(text, 'user');
+  //convo.push({ role: 'user', content: text, ts: Date.now() });
+  //inputEl.value = '';
+  // 轻量共情回应(真·对话可在后端接 deepseekReply,这里仅作陪伴占位)
+  //setTimeout(() => addMsg(ACKS[Math.floor(Math.random()*ACKS.length)], 'bot'), 250);
+//}
+
 function send() {
+  return sendReal();
+}
+async function sendReal() {
   const text = inputEl.value.trim();
   if (!text) return;
   addMsg(text, 'user');
   convo.push({ role: 'user', content: text, ts: Date.now() });
   inputEl.value = '';
-  // 轻量共情回应(真·对话可在后端接 deepseekReply,这里仅作陪伴占位)
-  setTimeout(() => addMsg(ACKS[Math.floor(Math.random()*ACKS.length)], 'bot'), 250);
+  try {
+    const res = await fetch('/api/daily/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: convo }),
+    });
+    const data = await res.json();
+    if (data.crisis) {
+      renderCrisis({ text: data.reply });
+      convo.push({ role: 'assistant', content: data.reply });
+      return;
+    }
+    addMsg(data.reply, 'bot');
+    convo.push({ role: 'assistant', content: data.reply });
+  } catch (e) {
+    addMsg('我在听,你继续说。', 'bot');
+    convo.push({ role:'assistant', content:'我在呢。今天过得怎么样?睡得好不好,累不累,心里有没有压着什么都行。' });
+  }
 }
 
 async function generate() {
