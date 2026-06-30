@@ -8,38 +8,48 @@
     "target_population": "具有焦虑症状的成年人及需排查焦虑情绪的人群",
     "timeframe": "最近一周内",
     "total_items": 20,
-    "item_score_range": [1, 4],
+    "item_score_range": [
+      1,
+      4
+    ],
     "instruction": "请根据您最近一周的实际感受，选择最符合的频率。每题只选一项，依据症状出现的频繁程度判断。",
     "item_phrasing_mode": "natural_and_empathetic",
-    "phrasing_note": "题目的临床含义不能改变，但表达方式完全交给你灵活组织。以 question 字段为起点，结合当下的对话氛围、用户的情绪和语言习惯自然地说出来——可换措辞、加过渡、顺着对方上一句话接，避免一题接一题机械地念。用户听不懂或表达困难时，用 plain_desc 解释或举例。",
-    "frequency_mapping_note": "本量表所有题目最终都计分在四档频率上，但不要对每一题都生硬追问『持续了几天』。多数躯体症状（手抖、心慌、头晕、出汗、脸红等）可以自然地问『最近有没有/常不常出现』，再由你把用户的口语描述合理映射到频率档。涉及状态或相对比较的反向题（如事事顺利、能否平静、呼吸是否顺畅、手是否温暖、睡眠好不好），应顺着语义自然提问，听完描述后由你映射档位，而非逼用户报一个不合常理的天数。"
+    "phrasing_note": "SAS包含了大量躯体化症状（如心慌、出汗、尿频等）。绝对不可机械地将它们作为单纯的问卷去宣读，更不要用医学术语去生硬提问。你需要将评估视作一次温和的健康关怀访谈。面对躯体不适，请表现出真实的关心，灵活运用生活化语言进行铺垫。给予自己极大的操作空间：允许根据上文自然带出问题，允许同理心回应用户的病痛描述，允许调整语序。",
+    "frequency_mapping_note": "本量表所有题目最终都计分在四档频率上，但绝对不要对每一题都生硬追问『持续了几天』。多数躯体症状可以自然地问『最近有没有/常不常出现』，再由你把用户的口语描述合理映射到频率档。反向题（如事事顺利、能否平静、睡眠好不好）应顺着语义自然提问，听完描述后由AI映射档位，绝不要逼用户机械地选1234。"
   },
   "interaction_style": {
-    "tone": "温暖、平和、不评判，像一个真诚又有经验的倾听者，而不是照本宣科的考官",
+    "tone": "极度温柔、体贴、细腻，像一位懂心理学且非常关切你身体状况的家庭医生或知心长辈，给予全方位的心理安全感和安抚",
     "freedom": [
-      "可自由重组语序、合并过渡语、使用口语和语气词，让提问自然贴合当前对话",
-      "用户回答后，鼓励给一句真诚的回应或确认（如『这种紧绷的感觉确实挺折磨人的』『谢谢你跟我说这些』）再过渡到下一题，不要每题都一样",
-      "用户主动倾诉时，先接住情绪、回应感受，再温和地引回评估，不要生硬打断",
-      "可根据用户的理解和状态自行决定解释的详略，举贴近他生活的例子",
-      "反馈结果时不要只甩一个分数和等级，应结合用户在对话中透露的具体情况，给出有温度、可落地的解读和建议"
+      "拥有极高的对话自由度：允许将多个躯体症状适度连贯起来，用聊天的形式自然探询（如：『那心跳呢？最近有没有觉得心慌？』）",
+      "打破一问一答的机械节奏：当用户描述躯体难受时，必须先给出安抚性的回应（如『那一定很难受』、『确实挺折腾人的』），再自然地进行评估确认",
+      "灵活处理反向题：提问时调整语态，顺着上一题的情绪用『那有没有好的时候？比如...』等自然过渡",
+      "可根据用户的理解和状态自行决定解释的详略，举贴近他生活的例子"
     ],
     "boundaries": [
-      "不得改变题目所测量的核心症状含义，不得增减题目、不得改动任何选项的分值与计分方向",
-      "不得替用户作答或诱导某一选项",
-      "SAS 无危机条目，但若对话中出现自伤或危机信号，应立即转入安全关怀，优先于评估流程",
-      "评估结束前应确保20题均有明确对应的频率作答"
+      "绝对不得改变题目所测量的核心生理或心理症状含义",
+      "不得增减题目、不得改动正反向选项的分值与计分规则",
+      "不得替用户生硬作答，若描述模糊，可温和追问以锁定频率档位",
+      "评估结束前确保20题均有明确对应的频率映射作答，但获取方式必须是柔和的"
+    ],
+    "language_guideline": [
+      "去机械化：绝对避免在每次提问前使用相同的过渡句，放弃‘接下来这道题’、‘我的下一个问题是’等冰冷句式。",
+      "自然融入选项：躯体症状不要每次强迫用户说出‘大部分时间’，可以用‘是这几天基本都这样，还是偶尔一两次？’来判断。",
+      "符合中文日常语境：避免机械照搬量表的西式翻译腔，尤其是‘神经过敏’、‘支离破碎感’等，需转化为‘神经绷得很紧’、‘身体快散架了’等接地气的表达。",
+      "去 AI 标签：保持沉浸式的关怀陪伴感，绝不能出现‘作为一个人工智能’、‘根据系统设定’、‘本量表共有20题’等出戏的表达。"
     ]
   },
   "option_frequency_anchor": {
-    "1": "没有或很少有（≤1天/周）",
-    "2": "有时有（1-2天/周）",
-    "3": "大部分时间有（3-4天/周）",
-    "4": "绝大多数时间有（5-7天/周）"
+    "1": "没有或很少有（不到1天）",
+    "2": "有时有（1-2天）",
+    "3": "大部分时间有（3-4天）",
+    "4": "绝大多数时间有（5-7天）"
   },
   "items": [
     {
-      "item_id": 1, "text": "我感到比往常更加神经过敏和焦虑",
-      "reverse_scored": false, "is_crisis_item": false,
+      "item_id": 1,
+      "text": "我感到比往常更加神经过敏和焦虑",
+      "reverse_scored": false,
+      "is_crisis_item": false,
       "plain_desc": "就是问你最近是不是比平时更紧张、更焦虑、神经更绷得紧",
       "question": "你最近一周，是不是觉得比平时更紧张、更容易焦虑？",
       "options": [
@@ -50,10 +60,12 @@
       ]
     },
     {
-      "item_id": 2, "text": "我无缘无故感到担心",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近是不是没什么具体原因、却莫名地担心害怕",
-      "question": "你最近一周，有没有那种说不上为什么、却莫名担心的感觉？",
+      "item_id": 2,
+      "text": "我无缘无故地感到害怕",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有明明没什么事，但心里就是一阵阵害怕的情况",
+      "question": "你最近一周，有没有过那种没来由的、自己都说不清为什么的害怕感？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -62,10 +74,12 @@
       ]
     },
     {
-      "item_id": 3, "text": "我容易心烦意乱或感到恐慌",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近是不是容易心烦、坐不住，或者突然一阵慌",
-      "question": "你最近一周，是不是容易心烦意乱，或者会突然感到恐慌？",
+      "item_id": 3,
+      "text": "我容易心里烦乱或觉得惊恐",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是很容易心烦意乱，或者突然觉得很惊慌",
+      "question": "你最近一周，是不是很容易觉得心里很乱，甚至突然觉得很慌张？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -74,8 +88,10 @@
       ]
     },
     {
-      "item_id": 4, "text": "我感到我的身体好像被分成几块，支离破碎",
-      "reverse_scored": false, "is_crisis_item": false,
+      "item_id": 4,
+      "text": "我感到我的身体好像被分成几块，支离破碎",
+      "reverse_scored": false,
+      "is_crisis_item": false,
       "plain_desc": "这题翻译得有点拗口，意思是：你有没有觉得身体不像是自己的、好像散了架、不太真实——这是焦虑时有些人会有的一种很难受的感觉",
       "phrasing_caution": "这题字面拗口，直接念用户多半听不懂。务必用 plain_desc 的口语方式问，先做一句铺垫（如『有个感觉有点不好形容，我尽量说清楚』），避免吓到用户。",
       "question": "你最近一周，有没有过那种身体好像不太像自己的、像散了架或不真实的奇怪感觉？",
@@ -87,8 +103,10 @@
       ]
     },
     {
-      "item_id": 5, "text": "我感到事事都很顺利，不会有倒霉的事情发生",
-      "reverse_scored": true, "is_crisis_item": false,
+      "item_id": 5,
+      "text": "我感到事事都很顺利，不会有倒霉的事情发生",
+      "reverse_scored": true,
+      "is_crisis_item": false,
       "plain_desc": "就是问你最近是不是觉得一切都挺顺、不会有坏事发生（反过来说，就是想了解你是不是总担心要出事）",
       "phrasing_caution": "这是反向题，问的是一种乐观/担忧的心境，不是按天数。不要问『事事顺利持续了几天』，自然地问『最近是觉得一切大致顺当，还是总隐隐担心要出什么事』，再映射档位。",
       "question": "你最近一周，是觉得日子大致顺当、没什么可担心的，还是总隐隐觉得要出点什么事？",
@@ -100,10 +118,12 @@
       ]
     },
     {
-      "item_id": 6, "text": "我的四肢抖动和震颤",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近手脚有没有发抖、打颤的情况",
-      "question": "你最近一周，手脚有没有出现发抖、打颤的情况？",
+      "item_id": 6,
+      "text": "我四肢发抖打颤",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近手脚有没有控制不住地发抖",
+      "question": "你最近一周，手脚有没有出现过不受控制地发抖或打颤的情况？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -112,10 +132,12 @@
       ]
     },
     {
-      "item_id": 7, "text": "我因头痛、颈痛、背痛而烦恼",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近有没有被头痛、脖子痛、背痛这些不适困扰",
-      "question": "你最近一周，有没有被头痛、脖子痛或背痛困扰？",
+      "item_id": 7,
+      "text": "我因头痛、颈痛和背痛而苦恼",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有经常头疼，或者觉得脖子、后背经常酸痛紧绷",
+      "question": "你最近一周，有没有经常觉得头疼，或者脖子、后背经常酸痛、紧绷得难受？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -124,10 +146,12 @@
       ]
     },
     {
-      "item_id": 8, "text": "我感到无力且容易疲劳",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近是不是觉得没劲儿、特别容易累",
-      "question": "你最近一周，是不是觉得浑身没劲、容易疲劳？",
+      "item_id": 8,
+      "text": "我感到无力且容易疲劳",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是总觉得没力气、动一动就很容易累",
+      "question": "你最近一周，是不是总觉得没什么力气，特别容易感到疲劳？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -136,11 +160,13 @@
       ]
     },
     {
-      "item_id": 9, "text": "我感到很平静，能安静坐下来",
-      "reverse_scored": true, "is_crisis_item": false,
-      "plain_desc": "就是问你最近是不是能心里平静、安安稳稳坐得住（反过来就是想了解你是不是坐立不安）",
-      "phrasing_caution": "反向题，自然地问『能不能让自己静下来、坐得住』即可，不要问『平静持续了几天』。",
-      "question": "你最近一周，能不能让自己平静下来、安安稳稳地坐住？",
+      "item_id": 9,
+      "text": "我感到平静，并且容易安静坐着",
+      "reverse_scored": true,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近能不能安静地坐下来，心里是平静的，还是总坐不住",
+      "phrasing_caution": "这也是反向题，自然过渡：『那有没有能踏实坐下来的好时候？』",
+      "question": "你最近一周，能安静、平静地坐得住吗？还是总觉得心里发毛、坐立难安？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 4},
         {"option_no": 2, "label": "有时有", "score": 3},
@@ -149,10 +175,12 @@
       ]
     },
     {
-      "item_id": 10, "text": "我感到我的心跳较快",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近有没有觉得心跳比平时快、心慌",
-      "question": "你最近一周，有没有觉得心跳比平时快、有点心慌？",
+      "item_id": 10,
+      "text": "我感到心跳很快",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有经常觉得心慌、心跳得很快很重",
+      "question": "你最近一周，有没有经常觉得心慌，或者感到心跳得很快很重？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -161,10 +189,12 @@
       ]
     },
     {
-      "item_id": 11, "text": "我因阵阵的眩晕而不舒服",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近有没有一阵阵头晕、天旋地转的不舒服",
-      "question": "你最近一周，有没有一阵阵头晕、发昏的不舒服？",
+      "item_id": 11,
+      "text": "我一阵阵头晕而无法安静坐着",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有一阵阵发晕，晕得连坐都坐不住",
+      "question": "你最近一周，有没有过一阵阵头晕，晕得甚至没办法好好坐着的情况？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -173,10 +203,12 @@
       ]
     },
     {
-      "item_id": 12, "text": "我有阵阵要昏倒的感觉",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近有没有过那种快要晕倒、眼前发黑的感觉",
-      "question": "你最近一周，有没有出现过快要晕倒、眼前发黑的感觉？",
+      "item_id": 12,
+      "text": "我有晕倒发作，或觉得要晕倒似的",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有真的晕倒过，或者觉得眼前发黑好像快要晕过去了",
+      "question": "你最近一周，有没有发生过晕倒，或者觉得眼前发黑、好像马上要晕过去似的？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -185,11 +217,13 @@
       ]
     },
     {
-      "item_id": 13, "text": "我呼吸时进气和出气都不费力",
-      "reverse_scored": true, "is_crisis_item": false,
-      "plain_desc": "就是问你最近呼吸顺不顺畅（反过来就是想了解你有没有觉得喘不上气、呼吸发紧）",
-      "phrasing_caution": "反向题，自然地问『呼吸顺不顺、有没有喘不上气或发紧』，不要问『呼吸顺畅持续了几天』。",
-      "question": "你最近一周，呼吸顺畅吗？有没有觉得喘不上气、呼吸发紧？",
+      "item_id": 13,
+      "text": "我呼气吸气都感到很容易",
+      "reverse_scored": true,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近呼吸顺不顺畅，还是经常觉得憋气、喘不上来气",
+      "phrasing_caution": "反向题。不要问『呼吸顺畅有几天』。自然地问：『呼吸上呢？觉得顺畅吗，还是经常憋气？』",
+      "question": "你最近一周，觉得呼吸顺畅吗？还是经常觉得气不够用、有点憋闷？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 4},
         {"option_no": 2, "label": "有时有", "score": 3},
@@ -198,10 +232,12 @@
       ]
     },
     {
-      "item_id": 14, "text": "我的手指和脚趾感到麻木和刺痛",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近手指、脚趾有没有发麻、刺痛的感觉",
-      "question": "你最近一周，手指或脚趾有没有发麻、刺痛的感觉？",
+      "item_id": 14,
+      "text": "我的手脚麻木和刺痛",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近手脚有没有经常发麻，或者像针扎一样的痛",
+      "question": "你最近一周，手脚有没有经常觉得发麻，或者有那种针扎似的刺痛感？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -210,10 +246,12 @@
       ]
     },
     {
-      "item_id": 15, "text": "我因胃痛和消化不良而苦恼",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近有没有胃痛、消化不好这类肠胃上的困扰",
-      "question": "你最近一周，有没有胃痛、消化不良这类肠胃上的困扰？",
+      "item_id": 15,
+      "text": "我因为胃痛和消化不良而苦恼",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近肠胃是不是不舒服，比如经常胃疼、胀气或者不消化",
+      "question": "你最近一周，肠胃还好吗？有没有经常胃疼或者消化不良、胀气？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -222,10 +260,12 @@
       ]
     },
     {
-      "item_id": 16, "text": "我必须时常排尿",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近是不是总想上厕所、小便次数比平时多",
-      "question": "你最近一周，是不是总想上厕所、小便比平时频繁？",
+      "item_id": 16,
+      "text": "我不得不经常排尿",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有老想上厕所、尿频的情况",
+      "question": "你最近一周，有没有觉得小便的次数变多了，经常想往洗手间跑？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -234,11 +274,13 @@
       ]
     },
     {
-      "item_id": 17, "text": "我的手总是很温暖而干燥",
-      "reverse_scored": true, "is_crisis_item": false,
-      "plain_desc": "就是问你的手平时是不是温暖、干爽的（反过来就是想了解你有没有手心出汗、手脚发凉这类紧张时常见的反应）",
-      "phrasing_caution": "反向题，自然地问『手是不是大多温暖干爽，有没有手心冒汗或手脚发凉』，不要问『手温暖干燥持续了几天』。",
-      "question": "你最近一周，手是不是大多是温暖干爽的？有没有出现手心冒汗或手脚发凉？",
+      "item_id": 17,
+      "text": "我的手脚总是温暖干燥",
+      "reverse_scored": true,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近手脚是干爽温暖的，还是经常出冷汗、冰凉的",
+      "phrasing_caution": "反向题。顺势问身体状况，不要逼问频次。",
+      "question": "你最近一周，手脚平时是比较干爽温暖的，还是经常出冷汗、冰凉的？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 4},
         {"option_no": 2, "label": "有时有", "score": 3},
@@ -247,10 +289,12 @@
       ]
     },
     {
-      "item_id": 18, "text": "我觉得脸发烧发红",
-      "reverse_scored": false, "is_crisis_item": false,
-      "plain_desc": "就是问你最近有没有觉得脸发烫、发红的情况",
-      "question": "你最近一周，有没有觉得脸发烫、发红？",
+      "item_id": 18,
+      "text": "我感到脸红发热",
+      "reverse_scored": false,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有经常觉得脸上一阵阵发热、发红",
+      "question": "你最近一周，有没有经常觉得脸上一阵阵发烫、发红？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 1},
         {"option_no": 2, "label": "有时有", "score": 2},
@@ -259,11 +303,13 @@
       ]
     },
     {
-      "item_id": 19, "text": "我容易入睡，晚上休息很好",
-      "reverse_scored": true, "is_crisis_item": false,
-      "plain_desc": "就是问你最近是不是容易睡着、晚上休息得好（反过来就是想了解你有没有失眠、睡不踏实）",
-      "phrasing_caution": "反向题，自然地问『晚上容易睡着吗、休息得好不好』，不要问『睡得好持续了几天』。",
-      "question": "你最近一周，晚上容易睡着吗？休息得好不好？",
+      "item_id": 19,
+      "text": "我容易入睡并且一夜睡得很好",
+      "reverse_scored": true,
+      "is_crisis_item": false,
+      "plain_desc": "就是问你最近睡眠好不好，容易入睡吗，还是失眠、睡不踏实",
+      "phrasing_caution": "反向题，核心是评估失眠程度。",
+      "question": "你最近一周，睡眠怎么样？入睡容易吗，能不能睡个安稳觉？",
       "options": [
         {"option_no": 1, "label": "没有或很少有", "score": 4},
         {"option_no": 2, "label": "有时有", "score": 3},
@@ -272,8 +318,10 @@
       ]
     },
     {
-      "item_id": 20, "text": "我做恶梦",
-      "reverse_scored": false, "is_crisis_item": false,
+      "item_id": 20,
+      "text": "我做恶梦",
+      "reverse_scored": false,
+      "is_crisis_item": false,
       "plain_desc": "就是问你最近做不做噩梦",
       "question": "你最近一周，有没有做噩梦？",
       "options": [
@@ -284,26 +332,54 @@
       ]
     }
   ],
-  "reverse_items": [5, 9, 13, 17, 19],
+  "reverse_items": [
+    5,
+    9,
+    13,
+    17,
+    19
+  ],
   "conditional_items": [],
   "scoring": {
     "step1_raw": "粗分 X = 各题 options.score 之和",
     "step2_standard": "标准分 Y = Math.floor(X * 1.25)",
-    "raw_range": [20, 80],
-    "standard_range": [25, 100]
+    "raw_range": [
+      20,
+      80
+    ],
+    "standard_range": [
+      25,
+      100
+    ]
   },
   "severity_levels": [
-    {"range": [25, 49],  "label": "无焦虑",   "advice": "标准分<50，无明显临床焦虑情绪，建议保持。"},
-    {"range": [50, 59],  "label": "轻度焦虑", "advice": "50-59分，存在轻度焦虑，建议自我调节并关注情绪变化。"},
-    {"range": [60, 69],  "label": "中度焦虑", "advice": "60-69分，中度焦虑，建议寻求专业心理咨询。"},
-    {"range": [70, 100], "label": "重度焦虑", "advice": "≥70分，重度焦虑，强烈建议尽快就医评估。"}
+    {
+      "range": [25, 49],
+      "label": "无明显焦虑",
+      "advice": "标准分＜50分，无明显焦虑倾向。请继续保持良好的生活方式。"
+    },
+    {
+      "range": [50, 59],
+      "label": "轻度焦虑",
+      "advice": "标准分50-59分，存在轻度焦虑倾向。建议多留意情绪变化，可尝试放松训练、规律作息，必要时寻求心理支持。"
+    },
+    {
+      "range": [60, 69],
+      "label": "中度焦虑",
+      "advice": "标准分60-69分，存在中度焦虑倾向。您的身体可能已经发出许多紧张的信号，建议寻求专业心理咨询的帮助，共同调节状态。"
+    },
+    {
+      "range": [70, 100],
+      "label": "重度焦虑",
+      "advice": "标准分≥70分，存在重度焦虑倾向。强烈建议您尽快到精神心理科就诊，获取专业的医疗评估和帮助，不要一个人默默承受。"
+    }
   ],
   "crisis_rule": null,
   "psychometrics": {
-    "reliability": "中文版 Cronbach's α=0.862，分半信度0.75",
-    "validity": "与HAM-A效标关联效度0.365",
+    "reliability": "中文版内在一致性信度（Cronbach's α）通常在 0.8 左右，信效度良好。",
+    "validity": "能较好地反映焦虑的主观感受及其躯体化症状，与临床诊断符合率较高。",
     "norm_cutoff": 50,
-    "note": "总分仅供参考，不取代临床访谈诊断；SAS含较多躯体症状条目，结果可能受躯体疾病影响，解读时需结合实际情况。"
+    "note": "SAS为临床与心理咨询中常用的焦虑自评筛查工具，侧重于评估焦虑的躯体化表现。结果需结合临床访谈解读，不可代替诊断。"
   },
-  "disclaimer": "本量表为情绪筛查工具，结果不构成医学诊断，不能替代精神科或心理科医生的临床评估。"
+  "disclaimer": "本量表为情绪与躯体症状筛查工具，结果不构成医学诊断，不能替代精神科或心理科医生的临床评估。"
 }
