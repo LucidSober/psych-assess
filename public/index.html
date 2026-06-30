@@ -75,9 +75,23 @@
 
 <script>
 let sessionId = null, finished = false;
-const inputEl = document.getElementById('input'), sendBtn = document.getElementById('sendBtn');
+const inputEl = document.getElementById('input'), 
+      sendBtn = document.getElementById('sendBtn'),
+      messagesEl = document.getElementById('messages'),
+      optionsBar = document.getElementById('optionsBar');
 
-// 1. 选项点击逻辑：将按钮文字填入输入框并自动发送
+// 1. 返回按钮逻辑：重置一切
+document.getElementById('backBtn').addEventListener('click', () => {
+    document.getElementById('chatView').style.display = 'none';
+    document.getElementById('pickView').style.display = 'block';
+    messagesEl.innerHTML = '';
+    sessionId = null;
+    finished = false;
+    optionsBar.style.display = 'flex';
+    sendBtn.disabled = false;
+});
+
+// 2. 选项点击逻辑
 document.querySelectorAll('.opt-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     inputEl.value = btn.textContent;
@@ -101,7 +115,7 @@ async function send() {
     if (data.reply) addMsg(data.reply, 'bot');
     if (data.status === 'completed') {
       finished = true;
-      document.getElementById('optionsBar').style.display = 'none';
+      optionsBar.style.display = 'none';
       if(data.score_result) addMsg(`测评完成：${data.score_result.severity_label}`, 'bot');
     }
   } catch (e) { alert('网络错误'); } finally { sendBtn.disabled = finished; }
@@ -111,8 +125,8 @@ function addMsg(text, who) {
   const div = document.createElement('div');
   div.className = `msg ${who}`;
   div.innerHTML = `<div class="bubble">${text}</div>`;
-  document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 sendBtn.addEventListener('click', send);
@@ -121,6 +135,7 @@ document.querySelectorAll('.scale-btn').forEach(btn => {
     const res = await fetch('/api/session', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({scale_id: btn.dataset.id})});
     const data = await res.json();
     sessionId = data.session_id;
+    document.getElementById('scaleName').innerText = data.scale_name || '心理测评';
     document.getElementById('pickView').style.display = 'none';
     document.getElementById('chatView').style.display = 'flex';
     addMsg(data.reply, 'bot');
