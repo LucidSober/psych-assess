@@ -227,7 +227,7 @@ async function processTurn(ctx, rawInput) {
     }
   }
 
-  // ↓↓↓ 新增：用户没看懂题意 → 解释题目，不推进、不追问频率
+  // 用户没看懂题意 → 解释题目，不推进、不追问频率
   if (detectConfused(clean)) {
     const item = scale.items.find(it => String(it.item_id) === String(state.pending_item));
     const plain = (item && item.plain_desc) || (item ? item.text : '');
@@ -243,7 +243,7 @@ async function processTurn(ctx, rawInput) {
   }
   // ↑↑↑ 注意：放在 crisis 之后，保证危机判断永远优先级最高
 
-// [GATE-1] 置信度（条件题+情境不适用 → 按中性选项计分，不追问）
+  // [GATE-1] 置信度（条件题+情境不适用 → 按中性选项计分，不追问）
   const curItem = scale.items.find(it => String(it.item_id) === String(state.pending_item));
   const isNA = curItem && curItem.conditional && detectNotApplicable(clean);
 
@@ -260,11 +260,17 @@ async function processTurn(ctx, rawInput) {
       if (state._current_followups < config.gates.max_followups_per_item) {
         state._current_followups += 1;
         const item = scale.items.find(it => String(it.item_id) === String(state.pending_item));
+        const plain = item.plain_desc || item.text;
 
         let coreNeed, fallback;
         if (state._current_followups === 1) {
-          coreNeed = `用户对"${item.text}"答得不够明确，温和地了解最近一周它大概有多频繁`;
-          fallback = '这种情况最近一周大概是经常有，还是偶尔有呢？';
+          coreNeed = `用户对"${item.text}"给不出明确答案。请严格三步走：`
+            + `①先共情，承认这种感觉本来就难说清；`
+            + `②用大白话把这种状态描述一遍（参考：${plain}）帮他对号入座；`
+            + `③给三档生活化的选择让他挑——「最近基本天天这样」「只在特别累或某些时候才有」「几乎没有」。`
+            + `绝对不要追问"几天/几次/多频繁"，不要让他报数字。`;
+          fallback = `这种感觉有时确实不好说清，没关系。${plain}——你觉得最近更接近`
+            + `「基本天天这样」「只在特别累时才有」还是「几乎没有」？挑个最贴近的就行。`;
         } else {
           const anchor = scale.option_frequency_anchor;
           const opts = item.options
