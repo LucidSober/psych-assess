@@ -81,6 +81,11 @@ function advancePending(ctx) {
   state._current_followups = 0;
 }
 
+// 取所有被判低置信/存疑的题号（按落库顺序），供终态反馈点名
+function flaggedItemIds(state) {
+  return state.answers.filter(a => a.flagged_low_confidence).map(a => a.item_id);
+}
+
 // ---------- 工具 ----------
 function pushHistory(ctx, userMsg, assistantMsg) {
   const h = ctx.state.history;
@@ -127,7 +132,7 @@ function escalate(ctx) {
 }
 
 // 报告生成：advice 默认用 JSON 原文；若注入 ctx.adviceFn（如 DeepSeek），
-// 则由模型对 advice 做共情措辞包装。分数/标签/免责声明永远不交给模型。
+// 则由模型对 advice 做共情措辞包装。分数/标签/免责声明/存疑题号永远不交给模型。
 async function buildReport(ctx, r) {
   let advice = r.advice;
   if (ctx.adviceFn) {
@@ -139,8 +144,13 @@ async function buildReport(ctx, r) {
       console.warn(`[buildReport] advice 包装降级，用原文: ${e.message}`);
     }
   }
+  // 完成但仍有题被存疑落库（skip_and_flag）→ 在报告里如实点名，写死文案不交给模型
+  const flagged = flaggedItemIds(ctx.state);
+  const flaggedNote = flagged.length
+    ? `（注意：第 ${flagged.join('、')} 题因回答始终无法确认，已按存疑处理，可能影响本次结果的准确性。）`
+    : '';
   return `测评完成。粗分 ${r.raw_score}，标准分 ${r.standard_score}，结果：${r.severity_label}。`
-    + `${advice}（本结果为情绪筛查参考，不构成医学诊断，不能替代专业医生的临床评估。）`;
+    + `${advice}${flaggedNote}（本结果为情绪筛查参考，不构成医学诊断，不能替代专业医生的临床评估。）`;
 }
 
 // 优先用注入的共情生成器(DeepSeek)；失败/未注入则回退到写死文案，保证永不崩、永不卡。
@@ -288,15 +298,18 @@ async function processTurn(ctx, rawInput) {
       }
       if (config.gates.followup_exhausted_action === 'transfer_human')
         return terminate(ctx, 'handoff', '追问耗尽转人工');
-      commitAnswer(ctx, mapped, true); // skip_and_flag
+      commitAnswer(ctx, mapped, true); // skip_and_flag → 该题标记为存疑/无效，报告点名
     } else {
       commitAnswer(ctx, mapped, false);
     }
   }
 
-  // [GATE-2] 完整性
-  if (state.low_confidence_count > config.gates.max_low_confidence_items)
-    return terminate(ctx, 'invalid', '低置信题超限');
+  // [GATE-2] 完整性：低置信超限 → invalid，并列出是哪几题压垮阈值
+  if (state.low_confidence_count > config.gates.max_low_confidence_items) {
+    const ids = flaggedItemIds(state);
+    return terminate(ctx, 'invalid',
+      `低置信题超限，第 ${ids.join('、')} 题无法确认`);
+  }
 
   if (state.answered_count < scale.meta.total_items) {
     advancePending(ctx);
