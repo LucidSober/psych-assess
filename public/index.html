@@ -7,46 +7,39 @@
 <style>
   * { box-sizing: border-box; }
   body { margin:0; font-family:system-ui,"Microsoft YaHei",sans-serif; background:#eef0f6; }
-  .header { background:#fff; padding:14px 20px; border-bottom:1px solid #e5e7eb;
-            display:flex; justify-content:space-between; align-items:center; }
+  .header { background:#fff; padding:14px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
   .header h1 { font-size:18px; margin:0; }
   .header .sub { font-size:12px; color:#888; }
   .progress { font-size:13px; color:#666; }
-  .back-btn { border:none; background:#f1f1f4; color:#555;
-              padding:8px 14px; border-radius:8px; font-size:14px; cursor:pointer; }
-  .back-btn:hover { background:#e2e2ea; }
-
+  .back-btn { border:none; background:#f1f1f4; color:#555; padding:8px 14px; border-radius:8px; font-size:14px; cursor:pointer; }
+  
   /* 选择页 */
   #pickView { max-width:560px; margin:60px auto; text-align:center; padding:0 16px; }
-  #pickView h2 { font-size:20px; color:#333; }
   .scale-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px; }
-  .scale-btn { padding:22px; border:none; border-radius:14px; background:#fff;
-               font-size:16px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.06);
-               transition:.15s; }
-  .scale-btn:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
-  .scale-btn small { display:block; color:#999; font-size:12px; margin-top:6px; }
-
+  .scale-btn { padding:22px; border:none; border-radius:14px; background:#fff; font-size:16px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.06); transition:.15s; }
+  
   /* 聊天页 */
-  #chatView { display:none; max-width:640px; margin:0 auto; height:100vh;
-              flex-direction:column; }
+  #chatView { display:none; max-width:640px; margin:0 auto; height:100vh; flex-direction:column; }
   #messages { flex:1; overflow-y:auto; padding:20px; }
   .msg { margin:10px 0; display:flex; }
-  .msg.bot  { justify-content:flex-start; }
+  .msg.bot { justify-content:flex-start; }
   .msg.user { justify-content:flex-end; }
   .bubble { max-width:75%; padding:12px 16px; border-radius:14px; line-height:1.5; }
-  .bot  .bubble { background:#fff; color:#333; }
+  .bot .bubble { background:#fff; color:#333; }
   .user .bubble { background:#6366f1; color:#fff; }
-  .crisis { text-align:center; color:#d33; font-weight:bold; padding:10px; }
+  
+  /* 选项栏样式 */
+  #optionsBar { padding:10px 20px; display:flex; gap:8px; flex-wrap:wrap; background:#f9fafb; border-top:1px solid #e5e7eb; }
+  .opt-btn { padding:8px 12px; border:1px solid #6366f1; background:#fff; color:#6366f1; border-radius:8px; cursor:pointer; font-size:13px; }
+  .opt-btn:hover { background:#6366f1; color:#fff; }
+  
   .inputbar { display:flex; padding:14px; background:#fff; border-top:1px solid #e5e7eb; }
   .inputbar input { flex:1; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; }
-  .inputbar button { margin-left:10px; padding:0 22px; border:none; border-radius:10px;
-                     background:#6366f1; color:#fff; font-size:15px; cursor:pointer; }
-  .inputbar button:disabled { background:#aaa; cursor:not-allowed; }
+  .inputbar button { margin-left:10px; padding:0 22px; border:none; border-radius:10px; background:#6366f1; color:#fff; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<!-- ===== 选择页 ===== -->
 <div id="pickView">
   <h2>请选择测评量表</h2>
   <div class="scale-grid">
@@ -57,24 +50,72 @@
   </div>
 </div>
 
-<!-- ===== 聊天页 ===== -->
 <div id="chatView">
   <div class="header">
     <div style="display:flex; align-items:center; gap:10px;">
       <button id="backBtn" class="back-btn">← 返回</button>
-      <div>
-        <h1 id="scaleName">心理测评</h1>
-        <div class="sub">情绪筛查 · 非医学诊断</div>
-      </div>
+      <div><h1 id="scaleName">心理测评</h1><div class="sub">情绪筛查 · 非医学诊断</div></div>
     </div>
     <div class="progress" id="progress"></div>
   </div>
   <div id="messages"></div>
+  
+  <!-- 选项区 -->
+  <div id="optionsBar">
+    <button class="opt-btn">完全没有</button>
+    <button class="opt-btn">有几天</button>
+    <button class="opt-btn">一半以上时间</button>
+    <button class="opt-btn">几乎每天</button>
+  </div>
+
   <div class="inputbar">
     <input id="input" placeholder="输入你的回答…" autocomplete="off">
     <button id="sendBtn">发送</button>
   </div>
 </div>
+
+<script>
+let sessionId = null, totalItems = 0, finished = false;
+const messagesEl = document.getElementById('messages'), inputEl = document.getElementById('input'), sendBtn = document.getElementById('sendBtn');
+
+function addMsg(text, who) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + who;
+  div.innerHTML = `<div class="bubble">${text}</div>`;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+// —— 选项点击逻辑 ——
+document.querySelectorAll('.opt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    inputEl.value = btn.textContent;
+    send();
+  });
+});
+
+async function send() {
+  const text = inputEl.value.trim();
+  if (!text || finished || !sessionId) return;
+  addMsg(text, 'user');
+  inputEl.value = '';
+  sendBtn.disabled = true;
+  try {
+    const res = await fetch(`/api/session/${sessionId}/turn`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (data.reply) addMsg(data.reply, 'bot');
+    if (data.status === 'completed') {
+      finished = true;
+      document.getElementById('optionsBar').style.display = 'none';
+    }
+  } catch (e) { addMsg('网络错误', 'bot'); } finally { sendBtn.disabled = finished; }
+}
+
+sendBtn.addEventListener('click', send);
 
 <script>
 let sessionId = null;
