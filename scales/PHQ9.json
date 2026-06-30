@@ -4,8 +4,11 @@
     "scale_name": "病人健康问卷抑郁量表",
     "english_name": "Patient Health Questionnaire-9",
     "author": "Spitzer R.L., Kroenke K., Williams J.B.W. (1999)",
+    "norm_source": "Pfizer 教育基金资助开发；中文版广泛用于临床与社区抑郁筛查",
+    "target_population": "需要快速评估抑郁情绪的成年人及青少年",
     "timeframe": "最近2周内",
     "total_items": 9,
+    "item_score_range": [0, 3],
     "top_priority_rule": "最高优先级规则（高于一切流程）：在任何一题中，只要用户没有给出能落到明确频率的回答（包括但不限于‘不知道’‘没感觉’‘说不上来’‘还好吧’‘有点吧’‘看情况’等模糊表达），绝对禁止重复原问题、禁止直接追问‘那到底是几天’、禁止催促用户给数字。必须严格按 interaction_style.handling_uncertainty.required_steps 执行：先共情，再用该题 plain_desc 从身体感受或日常表现切入帮其回顾，最后用三档生活化描述让用户选择，并由 AI 自行映射为 0-3 分。另一条同等最高优先级：第9题为危机条目，只要得分≥1，立即触发 crisis_rule，放下评估流程优先关心用户安全，不得淡化、不得仅当作普通计分项。",
     "instruction": "请回想最近两周的真实状态，按每种情况困扰你的频率来回答。如实选择即可，没有对错之分。",
     "item_phrasing_mode": "natural_and_empathetic",
@@ -68,7 +71,7 @@
   "items": [
     {
       "item_id": 1, "text": "做事时提不起劲或没有兴趣",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近做事是不是没什么劲头、连以前喜欢的事也提不起兴趣",
       "question": "最近两周，你是不是觉得做什么都提不起劲，连平时感兴趣的事也没兴趣了？",
       "options": [
@@ -80,7 +83,7 @@
     },
     {
       "item_id": 2, "text": "感到心情低落、沮丧或绝望",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近是不是常常情绪低落、心里发沉，甚至觉得没什么盼头",
       "question": "这两周，你是不是经常感到情绪低落、沮丧，或是有些绝望？",
       "options": [
@@ -92,7 +95,7 @@
     },
     {
       "item_id": 3, "text": "入睡困难、睡不安稳或睡得过多",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近睡眠怎么样，是难入睡、睡不踏实，还是反而睡得特别多",
       "question": "最近你的睡眠怎么样？有没有难入睡、睡不安稳，或者反而睡得过多的情况？",
       "options": [
@@ -104,7 +107,7 @@
     },
     {
       "item_id": 4, "text": "感觉疲倦或没有活力",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近是不是总觉得累、没精神、提不起力气",
       "question": "这两周，你是不是常常觉得很疲惫、浑身没有活力？",
       "options": [
@@ -116,7 +119,7 @@
     },
     {
       "item_id": 5, "text": "食欲缺乏或吃太多",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近胃口怎么样，是没什么胃口，还是反而吃得比平时多",
       "question": "最近你的胃口有变化吗？是没什么食欲，还是反而吃得偏多？",
       "options": [
@@ -128,7 +131,7 @@
     },
     {
       "item_id": 6, "text": "觉得自己很糟，或觉得自己很失败，或让自己、家人失望",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近是不是常觉得自己不够好、很失败，或者觉得让家人失望了",
       "question": "这两周，你有没有常常觉得自己很糟糕、很失败，或者觉得辜负了自己和家人？",
       "options": [
@@ -140,7 +143,7 @@
     },
     {
       "item_id": 7, "text": "对事物专注有困难，例如看报纸或看电视时",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近注意力是不是不容易集中，比如看书、看电视、刷手机时容易走神",
       "question": "最近你是不是觉得注意力很难集中，比如看东西、做事时容易走神？",
       "options": [
@@ -152,7 +155,7 @@
     },
     {
       "item_id": 8, "text": "行动或说话速度缓慢到别人已经察觉，或刚好相反，变得比平日更烦躁或坐立不安、动来动去",
-      "is_crisis_item": false,
+      "reverse_scored": false, "is_crisis_item": false,
       "plain_desc": "就是问你最近动作、说话是不是慢到别人都看出来了；或者反过来，比平时更烦躁、坐不住、总动来动去",
       "question": "最近别人有没有说你行动或说话变慢了？或者反过来，你比平时更烦躁、坐不住、停不下来？",
       "options": [
@@ -164,7 +167,7 @@
     },
     {
       "item_id": 9, "text": "有不如死掉或用某种方式伤害自己的念头",
-      "is_crisis_item": true,
+      "reverse_scored": false, "is_crisis_item": true,
       "plain_desc": "这一题比较沉重，是想了解你最近有没有过『不想活了』或者想伤害自己的念头。如果有，并不可耻，说出来反而是迈向被帮助的一步",
       "phrasing_caution": "本题为危机条目。请务必放慢节奏、先做铺垫、表达接纳，绝不可跳过或弱化原意。一旦得分≥1，立即按 crisis_rule 优先处理用户安全，而非继续计分或推进流程。",
       "question": "还有一个比较重要、也比较沉的问题，我想认真问问你——最近两周，你有没有冒出过『不如死掉算了』，或者想用某种方式伤害自己的念头？",
@@ -176,6 +179,8 @@
       ]
     }
   ],
+  "reverse_items": [],
+  "conditional_items": [],
   "scoring": {
     "step1_raw": "总分 = 各题 options.score 之和",
     "step2_standard": "PHQ-9 直接使用原始总分，无需换算",
@@ -189,6 +194,7 @@
     {"range": [15, 19], "label": "中重度抑郁",   "advice": "15-19分，可能有中重度抑郁，建议尽快就医评估并考虑专业干预。"},
     {"range": [20, 27], "label": "重度抑郁",     "advice": "20-27分，可能有重度抑郁，强烈建议尽快到精神心理科就诊。"}
   ],
+  "screening_note": "总分≥10通常作为需进一步评估的临界点（灵敏度、特异度均较高）。此外第9题任意得分≥1均需触发危机流程。PHQ-9为筛查工具，不等同于诊断。",
   "crisis_rule": {
     "trigger_item": 9,
     "trigger_condition": "item_9.score >= 1",
@@ -199,6 +205,12 @@
       "第3步：明确表达关心，鼓励其向身边信任的人或专业资源求助，并可提供心理援助热线信息。",
       "第4步：在确认用户当下安全、情绪相对平稳后，再决定是否继续或暂停后续评估。"
     ]
+  },
+  "psychometrics": {
+    "reliability": "Cronbach's α 约 0.86–0.89，重测信度良好",
+    "validity": "与 SCID、HAM-D 等临床访谈及量表具有良好相关性",
+    "norm_cutoff": 10,
+    "note": "PHQ-9对抑郁症状敏感，兼具严重度分级与筛查功能；结果需结合临床访谈解读，第9题须单独关注自伤风险。"
   },
   "disclaimer": "本量表为情绪筛查工具，结果不构成医学诊断，不能替代精神科或心理科医生的临床评估。"
 }
