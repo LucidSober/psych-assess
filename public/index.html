@@ -42,7 +42,10 @@
 
 <div id="pickView">
   <h2>请选择测评量表</h2>
-  <div class="scale-grid">
+  <a href="daily.html" class="scale-btn" style="display:block;text-decoration:none;color:#fff;margin-top:28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+    今天活得怎么样?<br><small style="opacity:.9">不用做题 · 随便聊聊今天,生成温柔小结</small>
+  </a>
+  <div class="scale-grid" style="margin-top:16px;">
     <button class="scale-btn" data-id="SAS">SAS<br><small>焦虑自评</small></button>
     <button class="scale-btn" data-id="SDS">SDS<br><small>抑郁自评</small></button>
     <button class="scale-btn" data-id="PHQ9">PHQ-9<br><small>抑郁筛查</small></button>
@@ -130,17 +133,22 @@ function addMsg(text, who) {
 }
 
 sendBtn.addEventListener('click', send);
-document.querySelectorAll('.scale-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const res = await fetch('/api/session', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({scale_id: btn.dataset.id})});
-    const data = await res.json();
-    sessionId = data.session_id;
-    document.getElementById('scaleName').innerText = data.scale_name || '心理测评';
-    document.getElementById('pickView').style.display = 'none';
-    document.getElementById('chatView').style.display = 'flex';
-    addMsg(data.reply, 'bot');
-  });
+
+async function startScale(scaleId) {
+  const res = await fetch('/api/session', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({scale_id: scaleId})});
+  const data = await res.json();
+  sessionId = data.session_id;
+  document.getElementById('scaleName').innerText = data.scale_name || '心理测评';
+  document.getElementById('pickView').style.display = 'none';
+  document.getElementById('chatView').style.display = 'flex';
+  addMsg(data.reply, 'bot');
+}
+document.querySelectorAll('.scale-btn[data-id]').forEach(btn => {
+  btn.addEventListener('click', () => startScale(btn.dataset.id));
 });
+// 来自「今天活得怎么样」日报的推荐路由:index.html?scale=SDS 直接进对应问卷
+const _preScale = new URLSearchParams(location.search).get('scale');
+if (_preScale) startScale(_preScale);
 </script>
 </body>
 </html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今天活得怎么样?</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:system-ui,"Microsoft YaHei",sans-serif; background:#eef0f6; height:100vh; display:flex; flex-direction:column; }
+  .header { background:#fff; padding:14px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
+  .header h1 { font-size:18px; margin:0; }
+  .header .sub { font-size:12px; color:#888; }
+  .back-btn { border:none; background:#f1f1f4; color:#555; padding:8px 14px; border-radius:8px; font-size:14px; cursor:pointer; text-decoration:none; }
+  .wrap { max-width:640px; margin:0 auto; width:100%; flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* 同意门 */
+  #consentView { padding:40px 24px; text-align:center; }
+  #consentView p { color:#555; line-height:1.7; font-size:14px; }
+  .primary { border:none; background:#6366f1; color:#fff; padding:12px 24px; border-radius:10px; font-size:15px; cursor:pointer; margin-top:16px; }
+  .ghost { border:1px solid #ccc; background:#fff; color:#666; padding:12px 20px; border-radius:10px; font-size:14px; cursor:pointer; margin-left:8px; }
+
+  #chatView { display:none; flex:1; flex-direction:column; overflow:hidden; }
+  #messages { flex:1; overflow-y:auto; padding:20px; }
+  .msg { margin:10px 0; display:flex; }
+  .msg.bot { justify-content:flex-start; }
+  .msg.user { justify-content:flex-end; }
+  .bubble { max-width:78%; padding:12px 16px; border-radius:14px; line-height:1.55; white-space:pre-wrap; }
+  .bot .bubble { background:#fff; color:#333; }
+  .user .bubble { background:#6366f1; color:#fff; }
+  .report .bubble { background:#fff; color:#333; border:1px solid #e0e2ec; }
+  .crisis .bubble { background:#fff4f4; color:#8a1f1f; border:1px solid #f3c4c4; }
+  .rec-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .rec-btn { border:1px solid #6366f1; background:#fff; color:#6366f1; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px; }
+  .rec-btn:hover { background:#6366f1; color:#fff; }
+
+  .inputbar { display:flex; padding:14px; background:#fff; border-top:1px solid #e5e7eb; gap:10px; }
+  .inputbar input { flex:1; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; }
+  .inputbar button { padding:0 18px; border:none; border-radius:10px; background:#6366f1; color:#fff; cursor:pointer; }
+  .inputbar .gen { background:#10b981; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <a class="back-btn" href="index.html">← 返回</a>
+    <div><h1>今天活得怎么样?</h1><div class="sub">随便聊聊今天 · 非医学诊断</div></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <!-- 知情同意 -->
+  <div id="consentView">
+    <h2>聊之前,先说清楚</h2>
+    <p>这里你可以随便说说今天或最近的状态。<br>
+    我会从你说的话里,轻轻留意和情绪、睡眠、精力有关的信号,<br>
+    在你点「生成今日小结」时,给你一段温柔的小结——<strong>这不是诊断,只是陪你看看自己</strong>。<br>
+    需要你同意后我才会做这件事,你随时可以停。</p>
+    <div>
+      <button class="primary" id="agreeBtn">我同意,开始聊</button>
+      <a class="ghost" href="index.html">先不了</a>
+    </div>
+  </div>
+
+  <!-- 聊天 -->
+  <div id="chatView">
+    <div id="messages"></div>
+    <div class="inputbar">
+      <input id="input" placeholder="说说今天过得怎么样…" autocomplete="off">
+      <button id="sendBtn">发送</button>
+      <button id="genBtn" class="gen">生成今日小结</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('input');
+const convo = []; // [{role, content}]
+const ACKS = ['嗯,我在听。', '谢谢你愿意说这些。', '我记下了,继续说。', '辛苦了。还有吗?'];
+
+document.getElementById('agreeBtn').onclick = () => {
+  document.getElementById('consentView').style.display = 'none';
+  document.getElementById('chatView').style.display = 'flex';
+  addMsg('我在呢。今天过得怎么样?睡得好不好,累不累,心里有没有压着什么都行。', 'bot');
+};
+
+function addMsg(text, who, extra) {
+  const div = document.createElement('div');
+  div.className = `msg ${who}`;
+  const safe = String(text).replace(/[<>]/g, '');
+  div.innerHTML = `<div class="bubble">${safe.replace(/\n/g,'<br>')}</div>`;
+  if (extra) div.querySelector('.bubble').appendChild(extra);
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function send() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  addMsg(text, 'user');
+  convo.push({ role: 'user', content: text, ts: Date.now() });
+  inputEl.value = '';
+  // 轻量共情回应(真·对话可在后端接 deepseekReply,这里仅作陪伴占位)
+  setTimeout(() => addMsg(ACKS[Math.floor(Math.random()*ACKS.length)], 'bot'), 250);
+}
+
+async function generate() {
+  if (convo.length === 0) { addMsg('还没聊到什么呢,先随便说两句今天的事吧。', 'bot'); return; }
+  addMsg('让我回顾一下我们今天聊的…', 'bot');
+  try {
+    const res = await fetch('/api/daily/report', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: convo, consent: true }),
+    });
+    const data = await res.json();
+    if (data.status === 'crisis') { renderCrisis(data.report); return; }
+    renderReport(data.report);
+  } catch (e) { addMsg('网络好像出了点问题,待会儿再试试?', 'bot'); }
+}
+
+function renderCrisis(report) {
+  const div = document.createElement('div');
+  div.className = 'msg crisis report';
+  div.innerHTML = `<div class="bubble">${report.text.replace(/\n/g,'<br>')}</div>`;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function renderReport(report) {
+  const div = document.createElement('div');
+  div.className = 'msg report';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = report.text.replace(/\n/g, '<br>');
+  // 推荐路由按钮 → 跳到正式问卷,预选量表
+  if (report.recommendations && report.recommendations.length) {
+    const box = document.createElement('div');
+    box.className = 'rec-btns';
+    report.recommendations.forEach(r => {
+      const b = document.createElement('button');
+      b.className = 'rec-btn';
+      b.textContent = `去做 ${r.name}（${r.scale_id}）`;
+      b.onclick = () => { window.location = `index.html?scale=${encodeURIComponent(r.scale_id)}`; };
+      box.appendChild(b);
+    });
+    bubble.appendChild(box);
+  }
+  div.appendChild(bubble);
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+document.getElementById('sendBtn').onclick = send;
+document.getElementById('genBtn').onclick = generate;
+inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+</script>
+</body>
+</html>
