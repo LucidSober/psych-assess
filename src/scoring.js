@@ -40,4 +40,72 @@ function scoreScale(scale, answers) {
   };
 }
 
-module.exports = { scoreScale };
+// ============================================================================
+// softScore —— 被动日报专用"软评分"。与上面的 scoreScale() 严格区分,绝不混用:
+//   - 输入:daily/aggregator 的维度画像 + 各量表对象。
+//   - 只复用 severity_levels 的标签阶梯,不照搬 scoreScale 的 *1.25 标准分
+//     (那是 SAS/SDS 满量表换算,不适用于只覆盖部分题的被动信号)。
+//   - 不伪造满量表总分:只给"覆盖到的强度"作保守下沿,永远带 weak_confidence。
+// ============================================================================
+function severityLabelForRaw(scale, raw) {
+  const lv = (scale.severity_levels || []).find(l => raw >= l.range[0] && raw <= l.range[1]);
+  return lv ? lv.label : null;
+}
+function labelByLevelIndex(scale, idx) {
+  const levels = scale.severity_levels || [];
+  if (levels.length === 0) return null;
+  return levels[Math.max(0, Math.min(levels.length - 1, idx))].label;
+}
+
+function softScore(profile, scalesById, config) {
+  const byScale = {};
+  for (const dim of profile.fired_dimensions) {
+    const d = profile.dimensions[dim];
+    (byScale[d.scale] = byScale[d.scale] || []).push(d);
+  }
+
+  const domains = {};
+  for (const [scaleId, dimsArr] of Object.entries(byScale)) {
+    const scale = scalesById[scaleId];
+    if (!scale) continue;
+    const domain = config.domain_of_scale[scaleId] || scaleId;
+
+    const softRawCovered = dimsArr.reduce((s, d) => s + d.frequency_band, 0);
+    const totalItems = (scale.meta && scale.meta.total_items) || scale.items.length;
+    const coveredItems = dimsArr.length;
+
+    const lowLabel = severityLabelForRaw(scale, softRawCovered);
+    const lowIdx = (scale.severity_levels || []).findIndex(
+      l => softRawCovered >= l.range[0] && softRawCovered <= l.range[1]);
+    const highLabel = labelByLevelIndex(scale, (lowIdx < 0 ? 0 : lowIdx) + 1);
+
+    const peakBand = Math.max(...dimsArr.map(d => d.frequency_band));
+    const recommend =
+      coveredItems >= config.recommend_gate.min_fired_dims ||
+      peakBand >= config.recommend_gate.min_peak_band;
+
+    domains[domain] = {
+      scale_id: scaleId, domain,
+      domain_label: config.domain_label[domain] || domain,
+      covered_items: coveredItems, total_items: totalItems,
+      soft_raw_covered: softRawCovered,
+      reference_band: lowLabel === highLabel ? [lowLabel] : [lowLabel, highLabel],
+      peak_frequency_band: peakBand,
+      weak_confidence: true, recommend,
+      dims: dimsArr.map(d => ({
+        dimension: `${d.scale}_item${d.item_id}`, label: d.label,
+        frequency_band: d.frequency_band, intensity: d.intensity, net_valence: d.net_valence })),
+    };
+  }
+
+  for (const [scaleId, domain] of Object.entries(config.domain_of_scale)) {
+    if (!domains[domain]) {
+      domains[domain] = {
+        scale_id: scaleId, domain, domain_label: config.domain_label[domain] || domain,
+        insufficient: true, weak_confidence: true, recommend: false, dims: [] };
+    }
+  }
+  return { domains, weak_confidence: true };
+}
+
+module.exports = { scoreScale, softScore, severityLabelForRaw };
