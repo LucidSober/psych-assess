@@ -144,13 +144,37 @@ async function buildReport(ctx, r) {
       console.warn(`[buildReport] advice 包装降级，用原文: ${e.message}`);
     }
   }
-  // 完成但仍有题被存疑落库（skip_and_flag）→ 在报告里如实点名，写死文案不交给模型
-  const flagged = flaggedItemIds(ctx.state);
-  const flaggedNote = flagged.length
-    ? `（注意：第 ${flagged.join('、')} 题因回答始终无法确认，已按存疑处理，可能影响本次结果的准确性。）`
+// 终态文案统一出口：分数行 + 存疑题点名 + 免责声明，三段都写死，绝不交给模型
+function flaggedNote(state) {
+  const ids = flaggedItemIds(state);
+  return ids.length
+    ? `（注意：第 ${ids.join('、')} 题因回答始终无法确认，已按存疑处理，本次结果未将其计入有效作答，可能影响准确性。）`
     : '';
-  return `测评完成。粗分 ${r.raw_score}，标准分 ${r.standard_score}，结果：${r.severity_label}。`
-    + `${advice}${flaggedNote}（本结果为情绪筛查参考，不构成医学诊断，不能替代专业医生的临床评估。）`;
+}
+
+function scoreLine(r) {
+  // 防空值：任一分数缺失就不硬拼，避免出现"总分，"这类断句
+  const parts = [];
+  if (r.raw_score != null) parts.push(`粗分 ${r.raw_score}`);
+  if (r.standard_score != null) parts.push(`标准分 ${r.standard_score}`);
+  const nums = parts.length ? parts.join('，') + '，' : '';
+  return `测评完成。${nums}结果：${r.severity_label}。`;
+}
+
+const DISCLAIMER = '（本结果为情绪筛查参考，不构成医学诊断，不能替代专业医生的临床评估。）';
+
+async function buildReport(ctx, r) {
+  let advice = r.advice;
+  if (ctx.adviceFn) {
+    try {
+      const wrapped = await ctx.adviceFn(ctx, r);
+      if (wrapped && typeof wrapped === 'string' && wrapped.trim())
+        advice = wrapped.trim();
+    } catch (e) {
+      console.warn(`[buildReport] advice 包装降级，用原文: ${e.message}`);
+    }
+  }
+  return `${scoreLine(r)}${advice}${flaggedNote(ctx.state)}${DISCLAIMER}`;
 }
 
 // 优先用注入的共情生成器(DeepSeek)；失败/未注入则回退到写死文案，保证永不崩、永不卡。
