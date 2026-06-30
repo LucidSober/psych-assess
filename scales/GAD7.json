@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "scale_id": "GAD7",
+    "scale_name": "广泛性焦虑障碍量表",
+    "english_name": "Generalized Anxiety Disorder-7",
+    "author": "Spitzer R.L., Kroenke K., Williams J.B.W. (2006)",
+    "norm_source": "Pfizer 教育基金资助开发；中文版广泛用于临床与社区焦虑筛查",
+    "target_population": "需要快速评估焦虑情绪的成年人及青少年",
+    "timeframe": "最近2周内",
+    "total_items": 7,
+    "item_score_range": [0, 3],
+    "instruction": "请回想最近两周的真实感受，按每个问题困扰你的频率来回答。没有标准答案，凭第一直觉如实选择即可。",
+    "item_phrasing_mode": "natural_and_empathetic",
+    "phrasing_note": "题目的临床含义不能改变，但表达方式完全可以由你灵活调整。优先用 question 字段作为起点，再根据对话氛围、用户的情绪状态和语言习惯自然地说出来——可以换措辞、加一句过渡、顺着用户上一句话接，避免机械地一题接一题地念。用户听不懂或表达困难时，用 plain_desc 来解释或举例。你可以适当回应用户的感受（如『听起来这阵子确实挺累的』）再继续提问，让评估更像一次被理解的交谈，而不是填表。"
+  },
+  "interaction_style": {
+    "tone": "温暖、平和、不评判，像一个有经验又真诚的倾听者",
+    "freedom": [
+      "可以自由重组语序、合并过渡语、使用口语和语气词，使提问自然贴合当前对话",
+      "可以在用户回答后给予简短共情或确认，再过渡到下一题，不必每题都一样",
+      "当用户主动倾诉时，先回应情绪，再温和地引回评估，不要生硬打断",
+      "可根据用户的理解水平自行决定解释的详略，举贴近其生活的例子"
+    ],
+    "boundaries": [
+      "不得改变题目所测量的核心症状含义",
+      "不得增减题目、不得改动任何选项的分值与计分方向",
+      "不得替用户作答或诱导某一选项",
+      "评估结束前应确保7题均有明确对应的频率作答"
+    ]
+  },
+  "option_frequency_anchor": {
+    "0": "完全不会（根本没有）",
+    "1": "好几天",
+    "2": "超过一半的天数",
+    "3": "几乎每天"
+  },
+  "items": [
+    {
+      "item_id": 1, "text": "感觉紧张、焦虑或不安",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是经常觉得心里紧绷、坐立难安、提着一口气放不下来",
+      "question": "最近两周，你常会感到紧张、焦虑或心神不宁吗？",
+      "options": [
+        {"option_no": 1, "label": "完全不会", "score": 0},
+        {"option_no": 2, "label": "好几天", "score": 1},
+        {"option_no": 3, "label": "超过一半的天数", "score": 2},
+        {"option_no": 4, "label": "几乎每天", "score": 3}
+      ]
+    },
+    {
+      "item_id": 2, "text": "无法停止或控制担忧",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你脑子里的担心是不是停不下来、想控制也控制不住",
+      "question": "这两周，你有没有那种担心一旦上来就停不下来、自己很难按住的感觉？",
+      "options": [
+        {"option_no": 1, "label": "完全不会", "score": 0},
+        {"option_no": 2, "label": "好几天", "score": 1},
+        {"option_no": 3, "label": "超过一半的天数", "score": 2},
+        {"option_no": 4, "label": "几乎每天", "score": 3}
+      ]
+    },
+    {
+      "item_id": 3, "text": "对各种事情担心太多",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你是不是各种大大小小的事都忍不住去操心、想得比别人多",
+      "question": "最近你是不是对很多事情都忍不住操心，担心的范围比较广？",
+      "options": [
+        {"option_no": 1, "label": "完全不会", "score": 0},
+        {"option_no": 2, "label": "好几天", "score": 1},
+        {"option_no": 3, "label": "超过一半的天数", "score": 2},
+        {"option_no": 4, "label": "几乎每天", "score": 3}
+      ]
+    },
+    {
+      "item_id": 4, "text": "难以放松",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是很难让自己真正松弛下来，总绷着",
+      "question": "这两周，你是不是觉得很难让自己放松下来？",
+      "options": [
+        {"option_no": 1, "label": "完全不会", "score": 0},
+        {"option_no": 2, "label": "好几天", "score": 1},
+        {"option_no": 3, "label": "超过一半的天数", "score": 2},
+        {"option_no": 4, "label": "几乎每天", "score": 3}
+      ]
+    },
+    {
+      "item_id": 5, "text": "坐立不安，以至于很难安静地坐下来",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近是不是心里发慌、坐不住，总想动来动去",
+      "question": "最近你有没有那种坐立不安、很难安安静静坐住的感觉？",
+      "options": [
+        {"option_no": 1, "label": "完全不会", "score": 0},
+        {"option_no": 2, "label": "好几天", "score": 1},
+        {"option_no": 3, "label": "超过一半的天数", "score": 2},
+        {"option_no": 4, "label": "几乎每天", "score": 3}
+      ]
+    },
+    {
+      "item_id": 6, "text": "变得容易生气或急躁",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近脾气是不是比平时大，容易烦、容易急",
+      "question": "这两周，你是不是比平时更容易烦躁、上火或发脾气？",
+      "options": [
+        {"option_no": 1, "label": "完全不会", "score": 0},
+        {"option_no": 2, "label": "好几天", "score": 1},
+        {"option_no": 3, "label": "超过一半的天数", "score": 2},
+        {"option_no": 4, "label": "几乎每天", "score": 3}
+      ]
+    },
+    {
+      "item_id": 7, "text": "感觉害怕，好像有可怕的事情要发生一样",
+      "reverse_scored": false, "is_crisis_item": false,
+      "plain_desc": "就是问你最近有没有一种说不清的恐惧感，好像有什么不好的事要发生",
+      "question": "最近你有没有过那种隐隐的害怕，好像有什么糟糕的事快要发生似的？",
+      "options": [
+        {"option_no": 1, "label": "完全不会", "score": 0},
+        {"option_no": 2, "label": "好几天", "score": 1},
+        {"option_no": 3, "label": "超过一半的天数", "score": 2},
+        {"option_no": 4, "label": "几乎每天", "score": 3}
+      ]
+    }
+  ],
+  "reverse_items": [],
+  "conditional_items": [],
+  "scoring": {
+    "step1_raw": "总分 = 各题 options.score 之和",
+    "step2_standard": "GAD-7 直接使用原始总分，无需换算",
+    "raw_range": [0, 21],
+    "standard_range": [0, 21]
+  },
+  "severity_levels": [
+    {"range": [0, 4],   "label": "无或极轻焦虑", "advice": "0-4分，基本没有明显焦虑，建议保持现有的状态和节奏。"},
+    {"range": [5, 9],   "label": "轻度焦虑",     "advice": "5-9分，存在轻度焦虑，可尝试规律作息、运动和放松练习，并留意情绪变化。"},
+    {"range": [10, 14], "label": "中度焦虑",     "advice": "10-14分，中度焦虑，建议寻求专业心理咨询的帮助。"},
+    {"range": [15, 21], "label": "重度焦虑",     "advice": "15-21分，重度焦虑，建议尽快到精神心理科就诊评估。"}
+  ],
+  "screening_note": "总分≥10通常作为需进一步评估的临界点（灵敏度、特异度均较高）。GAD-7为筛查工具，不等同于诊断。",
+  "crisis_rule": null,
+  "psychometrics": {
+    "reliability": "Cronbach's α 约 0.92，重测信度良好",
+    "validity": "与 Beck 焦虑量表、HAM-A 等具有良好相关性",
+    "norm_cutoff": 10,
+    "note": "GAD-7对广泛性焦虑敏感，也可提示其他焦虑相关问题；结果需结合临床访谈解读。"
+  },
+  "disclaimer": "本量表为情绪筛查工具，结果不构成医学诊断，不能替代精神科或心理科医生的临床评估。"
+}
