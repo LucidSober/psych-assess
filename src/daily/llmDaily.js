@@ -10,7 +10,7 @@ const { buildMapperMessages, parseMapperOutput } = require('./mapper');
 const CRISIS_REGEX = /想死|不想活|不想活了|自杀|结束生命|活着没意思|活着没意义|轻生|了结自己|不想醒|消失算了/;
 
 // ---------- 真·LLM ----------
-async function deepseekDailyMap({ snippets, allowedDimensions, dimMeta, timeWindow }) {
+async function deepseekDailyMap({ snippets, allowedDimensions, dimMeta, signals, timeWindow }) {
   const { callDeepSeek } = require('../llmDeepSeek');
   const { system, messages } = buildMapperMessages({ allowedDimensions, snippets, dimMeta, timeWindow });
   if (messages.length === 0) return { items: [], crisis: false };
@@ -19,9 +19,11 @@ async function deepseekDailyMap({ snippets, allowedDimensions, dimMeta, timeWind
     content = await callDeepSeek([{ role: 'system', content: system }, ...messages],
       { timeoutMs: 15000, json: true });
   } catch (e) {
-    // 房规:失败降级,不崩。细筛拿不到就当本批无结构化片段,但危机正则仍兜底。
-    console.warn(`[deepseekDailyMap] 降级(${e.message})`);
-    return { items: [], crisis: snippets.some(s => CRISIS_REGEX.test(s)) };
+    // 失败不清零:退回词典/语气的启发式召回,至少别把苗头全丢了(取向:宁可多虑)。危机正则仍兜底。
+    console.warn(`[deepseekDailyMap] 降级到启发式召回(${e.message})`);
+    const fb = await stubDailyMap({ snippets, allowedDimensions, signals });
+    fb.crisis = fb.crisis || snippets.some(s => CRISIS_REGEX.test(s));
+    return fb;
   }
   const out = parseMapperOutput(content, allowedDimensions);
   out.crisis = out.crisis || snippets.some(s => CRISIS_REGEX.test(s));
@@ -36,6 +38,9 @@ const TONE_LEXICON = [
   [/(空壳|行尸走肉|没有灵魂|像个机器)/, 'PHQ9_item2', 'negative', 2, '描述空洞/抽离感'],
   [/(撑不住|扛不住|快崩溃|绷不住|顶不住)/, 'PHQ9_item2', 'negative', 3, '描述濒临崩溃'],
   [/(活着.*(没意义|没意思|累)|没什么意思)/, 'PHQ9_item2', 'negative', 3, '描述意义感丧失'],
+  [/(内耗|精神内耗|被生活推着走)/, 'PHQ9_item2', 'negative', 2, '描述持续消耗/心累'],
+  [/(没动力|丧失.{0,2}动力|提不起动力|不想动|动不了)/, 'PHQ9_item1', 'negative', 2, '描述动力缺失'],
+  [/(不想上班|不想上学|不想去公司)/, 'PHQ9_item1', 'negative', 1, '描述回避/提不起劲'],
   [/(喘不过气|心口压|胸口闷|提着一口气)/, 'GAD7_item1', 'negative', 2, '描述躯体化焦虑'],
   [/(一整天.*(就这么|晃|耗)|什么都没做成)/, 'PHQ9_item4', 'negative', 1, '描述空耗/无力'],
   [/(谁都不想理|不想见人|把自己关)/, 'PHQ9_item1', 'negative', 2, '描述社交退缩'],
