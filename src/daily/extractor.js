@@ -1,27 +1,21 @@
 // src/daily/extractor.js
-// 1 粗筛(词典/正则)→ 2 危机硬旁路(最高优先级,在 LLM 之前)→ 3 LLM 细筛 → 情绪片段。
+// 管线:1 危机硬旁路(最高优先级,确定性,在 LLM 之前)→ 2 送审(几乎全部 user 发言)→ 3 LLM 细筛。
+// 设计取向:日常检测宁可多虑,不漏苗头 —— 不再用关键词门卡在 LLM 前面。
+//   词典只当"先验提示",不再决定一句话能不能被 LLM 看到。真正的判断交给 LLM,依据是真实量表题目。
 // 产出: { items:[结构化片段], crisis:bool, candidates:[送审片段], skipped_clean:bool }
 
-// 与房规一致的危机正则:确定性、不依赖 LLM。命中即旁路,绝不进聚合。
+// 唯一保留的确定性关卡:危机。命中即旁路,绝不进聚合。它是安全底线(floor),LLM 只能在其上加判、不能减判。
 const CRISIS_REGEX = /想死|不想活|不想活了|自杀|结束生命|活着没意思|活着没意义|轻生|了结自己|不想醒来?|消失算了|不如死/;
 
-// 一句话是否"值得送 LLM 细看":命中词典,或带情绪/第一人称信号(让无关键词的低落也有机会)。
-const EMOTION_HINT = /(我|自己|心里|感觉|觉得|最近|这几天|今天).{0,12}(累|烦|丧|难受|哭|怕|慌|空|撑|扛|睡|没劲|不想|提不起|崩|堵)|(没意思|无所谓|麻木|焦虑|压抑)/;
+// 纯填充/无内容的口水词,送 LLM 也只会空手而归,过滤掉只为省 token —— 绝不过滤任何可能带情绪的话。
+const FILLER_ONLY = /^(?:嗯+|哦+|噢+|额+|呃+|好+的?|行+|在+|ok|okay|哈+|嘿+|嗯呐|收到|了解|明白|谢谢?|。+|，+|,+|\.+|~+|\?+|？+|!+|！+)$/i;
 
 function splitUtterances(messages) {
-  // messages: [{role:'user'|'assistant', content, ts?}] —— 只看 user。
   return (messages || [])
     .filter(m => m && m.role === 'user' && String(m.content || '').trim())
     .map(m => ({ text: String(m.content).trim(), ts: m.ts || null }));
 }
 
-function coarseHits(text, dict) {
-  const hits = [];
-  for (const sig of dict) if (sig.re.test(text)) hits.push(sig.dimension);
-  return [...new Set(hits)];
-}
-
-// 把 signals.json 摊平成 [{dimension, re, ...}]
 function flattenSignals(signals) {
   const out = [];
   for (const [dim, v] of Object.entries((signals && signals.dimensions) || {})) {
@@ -33,22 +27,42 @@ function flattenSignals(signals) {
   }
   return out;
 }
+function coarseHits(text, dict) {
+  const hits = [];
+  for (const sig of dict) if (sig.re.test(text)) hits.push(sig.dimension);
+  return [...new Set(hits)];
+}
+
+// 给每个维度装上"真实量表语义"(题目原文 + 大白话),让 LLM 拿着量表判断,而不是对着一个标签猜。
+function buildDimMeta(signals, scalesById) {
+  const meta = {};
+  for (const [dim, v] of Object.entries((signals && signals.dimensions) || {})) {
+    const scale = scalesById && scalesById[v.scale];
+    const item = scale && (scale.items || []).find(it => String(it.item_id) === String(v.item_id));
+    meta[dim] = {
+      label: v.label || dim,
+      text: (item && item.text) || v.scale_item_text || '',
+      plain_desc: (item && item.plain_desc) || '',
+    };
+  }
+  return meta;
+}
 
 /**
  * @param {Object} p
- * @param {Array}  p.messages   会话消息
- * @param {Object} p.signals    signals.json
- * @param {Function} p.mapFn    细筛实现(deepseekDailyMap | stubDailyMap)
- * @param {Object} [p.config]
+ * @param {Array}    p.messages     会话消息
+ * @param {Object}   p.signals      signals.json
+ * @param {Object}   [p.scalesById] { PHQ9, GAD7 } 真实量表,用来给 LLM 提供题目语义
+ * @param {Function} p.mapFn        细筛实现(deepseekDailyMap | stubDailyMap)
+ * @param {Object}   [p.config]
  */
-async function extract({ messages, signals, mapFn, config }) {
+async function extract({ messages, signals, scalesById, mapFn, config }) {
   const utterances = splitUtterances(messages);
   const dict = flattenSignals(signals);
   const allowedDimensions = Object.keys(signals.dimensions || {});
-  const dimMeta = Object.fromEntries(
-    Object.entries(signals.dimensions || {}).map(([k, v]) => [k, v.label || '']));
+  const dimMeta = buildDimMeta(signals, scalesById);
 
-  // ---- 2 危机硬旁路:先于一切。命中就立刻返回,不送细筛、不进聚合 ----
+  // ---- 1 危机硬旁路:先于一切。命中立即返回,不送细筛、不进聚合 ----
   for (const u of utterances) {
     if (CRISIS_REGEX.test(u.text)) {
       return { items: [], crisis: true, crisis_snippet: u.text.slice(0, 200),
@@ -56,31 +70,27 @@ async function extract({ messages, signals, mapFn, config }) {
     }
   }
 
-  // ---- 1 粗筛:挑出"可能有情绪"的句子送审 ----
-  const candidates = [];
-  for (const u of utterances) {
-    const hits = coarseHits(u.text, dict);
-    if (hits.length > 0 || EMOTION_HINT.test(u.text)) {
-      candidates.push({ text: u.text, ts: u.ts, dict_dims: hits });
-    }
-  }
+  // ---- 2 送审:除纯口水词外,全部 user 发言都交给 LLM 判断(不再用关键词门筛) ----
+  const candidates = utterances
+    .filter(u => u.text.length >= 2 && !FILLER_ONLY.test(u.text))
+    .map(u => ({ text: u.text, ts: u.ts, dict_dims: coarseHits(u.text, dict) })); // dict_dims 仅作先验提示
+
   if (candidates.length === 0) {
-    // 整段都是无关闲聊 → 直接判定无信号,省一次 LLM 调用
+    // 整段都是"嗯/哦/好的"这类无内容 → 无从判断,省一次调用
     return { items: [], crisis: false, candidates: [], skipped_clean: true };
   }
 
-  // ---- 3 LLM 细筛 ----
+  // ---- 3 LLM 细筛(依据真实量表语义,倾向捕捉而非漏掉) ----
   const { items, crisis } = await mapFn({
     snippets: candidates.map(c => c.text),
     allowedDimensions, dimMeta, signals,
     timeWindow: (config && config.time_window_label) || '最近两周',
   });
 
-  // 给每条片段补上时间戳(从原句回填,聚合算密度要用)
   const tsByText = new Map(candidates.map(c => [c.text, c.ts]));
-  for (const it of items) if (!it.ts) it.ts = tsByText.get(it.snippet) || null;
+  for (const it of (items || [])) if (!it.ts) it.ts = tsByText.get(it.snippet) || null;
 
   return { items: items || [], crisis: !!crisis, candidates, skipped_clean: false };
 }
 
-module.exports = { extract, CRISIS_REGEX, splitUtterances, flattenSignals };
+module.exports = { extract, CRISIS_REGEX, splitUtterances, flattenSignals, buildDimMeta };
