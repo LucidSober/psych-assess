@@ -74,9 +74,17 @@
   .bot .bubble { background: #fff; color: #1f2937; border-bottom-left-radius: 4px; }
   .user .bubble { background: #6366f1; color: #fff; border-bottom-right-radius: 4px; }
   
+  /* ✨ 打字机光标闪烁特效 */
+  .bubble.typing::after {
+    content: ' ▍';
+    animation: blink 1s step-end infinite;
+    color: #a5b4fc;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
   .crisis { text-align: center; color: #ef4444; font-weight: bold; padding: 12px; margin: 16px 0; background: #fef2f2; border-radius: 12px; font-size: 14px; border: 1px solid #fee2e2; }
 
-  /* —— 选项栏样式 (Pill 风格) —— */
+  /* —— 选项栏样式 —— */
   #optionsBar { 
     padding: 12px 20px; display: flex; gap: 10px; flex-wrap: wrap; 
     background: #fff; border-top: 1px solid #f3f4f6; justify-content: center; 
@@ -155,6 +163,7 @@
 let sessionId = null;
 let totalItems = 0;
 let finished = false;
+let isTyping = false; // ✨ 新增：全局打字锁，防止用户打断
 
 const messagesEl = document.getElementById('messages');
 const inputEl    = document.getElementById('input');
@@ -163,13 +172,43 @@ const optionsBar = document.getElementById('optionsBar');
 const progressEl = document.getElementById('progress');
 
 // —— UI 更新辅助函数 ——
-function addMsg(text, who) {
-  const div = document.createElement('div');
-  div.className = `msg ${who}`;
-  div.innerHTML = `<div class="bubble"></div>`;
-  div.querySelector('.bubble').textContent = text;
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+function addMsg(text, who, typing = false) {
+  return new Promise(resolve => {
+    const div = document.createElement('div');
+    div.className = `msg ${who}`;
+    div.innerHTML = `<div class="bubble"></div>`;
+    const bubble = div.querySelector('.bubble');
+    messagesEl.appendChild(div);
+
+    // ✨ 如果是机器人且开启打字机模式
+    if (typing && who === 'bot') {
+      isTyping = true;
+      sendBtn.disabled = true;
+      bubble.classList.add('typing'); // 挂载光标特效
+      
+      let i = 0;
+      function typeNext() {
+        if (!isTyping) return resolve(); // 若中途被返回打断，安全退出
+        if (i < text.length) {
+          bubble.textContent += text.charAt(i);
+          i++;
+          messagesEl.scrollTop = messagesEl.scrollHeight; // 实时吸底
+          setTimeout(typeNext, 25); // 打字速度：每字 25ms (可根据喜好调整)
+        } else {
+          bubble.classList.remove('typing'); // 移除光标
+          isTyping = false;
+          if (!finished) sendBtn.disabled = false;
+          resolve();
+        }
+      }
+      typeNext();
+    } else {
+      // 瞬间显示（用户发送的消息，或打字机关闭时）
+      bubble.textContent = text;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      resolve();
+    }
+  });
 }
 
 function addCrisis(text) {
@@ -189,7 +228,7 @@ function setProgress(n) {
   }
 }
 
-// —— 1. 返回主页逻辑 (保留确认拦截) ——
+// —— 1. 返回主页逻辑 ——
 document.getElementById('backBtn').addEventListener('click', () => {
   if (sessionId && !finished) {
     if (!confirm('返回主页将结束当前测评，确定吗？')) return;
@@ -198,6 +237,7 @@ document.getElementById('backBtn').addEventListener('click', () => {
   sessionId  = null;
   totalItems = 0;
   finished   = false;
+  isTyping   = false; // 解除打字锁
   
   // 重置 UI
   messagesEl.innerHTML = '';
@@ -210,9 +250,10 @@ document.getElementById('backBtn').addEventListener('click', () => {
   document.getElementById('pickView').style.display = 'block';
 });
 
-// —— 2. 选项点击逻辑：将按钮文字填入输入框并自动发送 ——
+// —— 2. 选项点击逻辑 ——
 document.querySelectorAll('.opt-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (isTyping || sendBtn.disabled) return; // ✨ 拦截打字时的疯狂误触
     inputEl.value = btn.textContent;
     send();
   });
@@ -220,10 +261,11 @@ document.querySelectorAll('.opt-btn').forEach(btn => {
 
 // —— 3. 核心发送逻辑 ——
 async function send() {
+  if (isTyping) return; // 打字时阻止新发送
   const text = inputEl.value.trim();
   if (!text || finished || !sessionId) return;
   
-  addMsg(text, 'user');
+  await addMsg(text, 'user');
   inputEl.value = '';
   sendBtn.disabled = true;
   
@@ -235,40 +277,40 @@ async function send() {
     });
     const data = await res.json();
     
-    // 错误处理保留
     if (!res.ok || data.error) { 
-      addMsg(data.error || '出错了', 'bot'); 
+      await addMsg(data.error || '出错了', 'bot', false); 
       return; 
     }
 
-    // 回复与进度更新
-    if (data.reply) addMsg(data.reply, 'bot');
+    // ✨ 等待 AI 的话逐字打完
+    if (data.reply) await addMsg(data.reply, 'bot', true); 
     if (data.answered_count !== undefined) setProgress(data.answered_count);
 
     // 终态判断
     if (data.status === 'completed') {
       finished = true;
-      optionsBar.style.display = 'none'; // 测评结束隐藏选项
+      optionsBar.style.display = 'none';
       const r = data.score_result;
       if (r) {
-        addMsg(`测评完成。总分 ${r.total_score ?? r.score ?? ''}，${r.severity_label ?? r.level ?? ''}`, 'bot');
+        // 出结果时也用打字机效果
+        await addMsg(`测评完成。总分 ${r.total_score ?? r.score ?? ''}，${r.severity_label ?? r.level ?? ''}`, 'bot', true);
       }
     } else if (data.status === 'crisis' || data.status === 'terminated') {
       finished = true;
-      optionsBar.style.display = 'none'; // 危机状态也隐藏选项
+      optionsBar.style.display = 'none';
       addCrisis('已转入危机关怀，测评中断');
     }
   } catch (e) { 
-    addMsg('网络错误：' + e.message, 'bot'); 
+    await addMsg('网络错误：' + e.message, 'bot', false); 
   } finally { 
-    sendBtn.disabled = finished; 
+    if (!isTyping) sendBtn.disabled = finished; 
   }
 }
 
-// —— 绑定发送事件 (包含 Enter 键支持) ——
+// —— 绑定发送事件 ——
 sendBtn.addEventListener('click', send);
 inputEl.addEventListener('keydown', e => { 
-  if (e.key === 'Enter') send(); 
+  if (e.key === 'Enter' && !isTyping) send(); 
 });
 
 // —— 4. 量表启动逻辑 ——
@@ -289,6 +331,7 @@ async function startScale(scaleId) {
     sessionId = data.session_id;
     totalItems = data.total_items || 0;
     finished = false;
+    isTyping = false;
     sendBtn.disabled = false;
     optionsBar.style.display = 'flex';
     
@@ -297,7 +340,8 @@ async function startScale(scaleId) {
     document.getElementById('chatView').style.display = 'flex';
     
     setProgress(0);
-    addMsg(data.reply, 'bot');
+    // ✨ 第一句话出场同样调用打字机效果
+    await addMsg(data.reply, 'bot', true);
     inputEl.focus();
   } catch (e) {
     alert('网络错误：' + e.message);
@@ -308,7 +352,6 @@ document.querySelectorAll('.scale-btn[data-id]').forEach(btn => {
   btn.addEventListener('click', () => startScale(btn.dataset.id));
 });
 
-// 来自「今天活得怎么样」日报的推荐路由: index.html?scale=SDS 直接进对应问卷
 const _preScale = new URLSearchParams(location.search).get('scale');
 if (_preScale) {
   startScale(_preScale);
