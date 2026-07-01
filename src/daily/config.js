@@ -32,7 +32,7 @@ module.exports = {
   // 证据太少 → 标"信号不足",不进 softScore 计分。
   sufficiency: {
     min_evidence_per_dim: 1,     // 单维度至少几条证据才算"有信号"
-    min_confidence_per_dim: 0.45, // 平均置信度低于此 → 维度记为弱/信号不足
+    min_confidence_per_dim: 0.35, // 平均置信度低于此 → 维度记为弱/信号不足
   },
 
   // 推荐去做正式量表的门槛(任一域达标即邀请)。
