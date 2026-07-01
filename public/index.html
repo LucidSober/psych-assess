@@ -6,46 +6,116 @@
 <title>心理测评</title>
 <style>
   * { box-sizing: border-box; }
-  body { margin:0; font-family:system-ui,"Microsoft YaHei",sans-serif; background:#eef0f6; height: 100vh; display: flex; flex-direction: column; }
-  .header { background:#fff; padding:14px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
-  .header h1 { font-size:18px; margin:0; }
-  .header .sub { font-size:12px; color:#888; }
-  .progress { font-size:13px; color:#666; }
-  .back-btn { border:none; background:#f1f1f4; color:#555; padding:8px 14px; border-radius:8px; font-size:14px; cursor:pointer; }
+  body { 
+    margin: 0; 
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif; 
+    background: #eef0f6; 
+    height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+  }
   
-  /* 选择页 */
-  #pickView { max-width:560px; margin:60px auto; text-align:center; padding:0 16px; width: 100%; }
-  .scale-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px; }
-  .scale-btn { padding:22px; border:none; border-radius:14px; background:#fff; font-size:16px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  /* —— 顶部导航栏 —— */
+  .header { 
+    background: #fff; 
+    padding: 14px 20px; 
+    border-bottom: 1px solid #e5e7eb; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    flex-shrink: 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  }
+  .header h1 { font-size: 18px; margin: 0; color: #111827; }
+  .header .sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .progress { font-size: 13px; color: #6366f1; font-weight: 600; background: #eef2ff; padding: 4px 10px; border-radius: 12px; }
+  .back-btn { 
+    border: none; background: #f3f4f6; color: #4b5563; 
+    padding: 8px 14px; border-radius: 8px; font-size: 14px; 
+    cursor: pointer; transition: all 0.2s ease; font-weight: 500;
+  }
+  .back-btn:hover { background: #e5e7eb; color: #111827; }
+
+  /* —— 选择页 —— */
+  #pickView { max-width: 560px; margin: 40px auto; text-align: center; padding: 0 20px; width: 100%; flex: 1; overflow-y: auto; }
+  #pickView h2 { font-size: 22px; color: #1f2937; margin-bottom: 10px; }
   
-  /* 聊天页 */
-  #chatView { display:none; max-width:640px; margin:0 auto; width:100%; flex:1; flex-direction:column; overflow:hidden; }
-  #messages { flex:1; overflow-y:auto; padding:20px; }
-  .msg { margin:10px 0; display:flex; }
-  .msg.bot { justify-content:flex-start; }
-  .msg.user { justify-content:flex-end; }
-  .bubble { max-width:75%; padding:12px 16px; border-radius:14px; line-height:1.5; }
-  .bot .bubble { background:#fff; color:#333; }
-  .user .bubble { background:#6366f1; color:#fff; }
+  .daily-btn { 
+    display: block; text-decoration: none; color: #fff; margin-top: 24px; 
+    background: linear-gradient(135deg, #6366f1, #8b5cf6); 
+    padding: 24px; border-radius: 16px; font-size: 18px; font-weight: 600; 
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25); transition: all 0.25s ease; 
+  }
+  .daily-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35); }
+  .daily-btn small { display: block; opacity: 0.9; font-size: 13px; margin-top: 8px; font-weight: 400; }
+
+  .scale-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; padding-bottom: 30px;}
+  .scale-btn { 
+    padding: 24px 16px; border: none; border-radius: 16px; background: #fff; 
+    font-size: 16px; font-weight: 600; color: #1f2937; cursor: pointer; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.25s ease;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.4;
+  }
+  .scale-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); color: #6366f1; }
+  .scale-btn small { display: block; color: #6b7280; font-size: 12px; margin-top: 8px; font-weight: 400; }
+
+  /* —— 聊天页 —— */
+  #chatView { display: none; max-width: 640px; margin: 0 auto; width: 100%; flex: 1; flex-direction: column; overflow: hidden; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.02); }
+  #messages { flex: 1; overflow-y: auto; padding: 20px; background: #fafafa; }
   
-  /* 选项栏样式 */
-  #optionsBar { padding:10px 20px; display:flex; gap:8px; flex-wrap:wrap; background:#f9fafb; border-top:1px solid #e5e7eb; }
-  .opt-btn { padding:8px 12px; border:1px solid #6366f1; background:#fff; color:#6366f1; border-radius:8px; cursor:pointer; font-size:13px; flex:1; white-space: nowrap; }
-  .opt-btn:hover { background:#6366f1; color:#fff; }
+  .msg { margin: 12px 0; display: flex; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .msg.bot { justify-content: flex-start; }
+  .msg.user { justify-content: flex-end; }
+  .bubble { 
+    max-width: 78%; padding: 12px 16px; border-radius: 16px; line-height: 1.5; 
+    font-size: 15px; word-wrap: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+  }
+  .bot .bubble { background: #fff; color: #1f2937; border-bottom-left-radius: 4px; }
+  .user .bubble { background: #6366f1; color: #fff; border-bottom-right-radius: 4px; }
   
-  .inputbar { display:flex; padding:14px; background:#fff; border-top:1px solid #e5e7eb; }
-  .inputbar input { flex:1; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; }
-  .inputbar button { margin-left:10px; padding:0 22px; border:none; border-radius:10px; background:#6366f1; color:#fff; cursor:pointer; }
+  .crisis { text-align: center; color: #ef4444; font-weight: bold; padding: 12px; margin: 16px 0; background: #fef2f2; border-radius: 12px; font-size: 14px; border: 1px solid #fee2e2; }
+
+  /* —— 选项栏样式 (Pill 风格) —— */
+  #optionsBar { 
+    padding: 12px 20px; display: flex; gap: 10px; flex-wrap: wrap; 
+    background: #fff; border-top: 1px solid #f3f4f6; justify-content: center; 
+  }
+  .opt-btn { 
+    padding: 10px 16px; border: 1px solid #e5e7eb; background: #fff; color: #4b5563; 
+    border-radius: 24px; cursor: pointer; font-size: 14px; flex: 1 1 auto; 
+    white-space: nowrap; text-align: center; transition: all 0.2s ease; font-weight: 500; 
+  }
+  .opt-btn:hover { background: #f4f6ff; color: #6366f1; border-color: #a5b4fc; }
+  .opt-btn:active { background: #eef2ff; transform: scale(0.98); }
+
+  /* —— 底部输入框 —— */
+  .inputbar { display: flex; padding: 14px 20px 20px 20px; background: #fff; border-top: 1px solid #f3f4f6; flex-shrink: 0; }
+  .inputbar input { 
+    flex: 1; padding: 12px 18px; border: 1px solid #e5e7eb; border-radius: 24px; 
+    font-size: 15px; transition: all 0.2s ease; outline: none; background: #f9fafb;
+  }
+  .inputbar input:focus { border-color: #818cf8; background: #fff; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+  .inputbar button { 
+    margin-left: 12px; padding: 0 24px; border: none; border-radius: 24px; 
+    background: #6366f1; color: #fff; font-size: 15px; font-weight: 500; 
+    cursor: pointer; transition: all 0.2s ease; 
+  }
+  .inputbar button:hover:not(:disabled) { background: #4f46e5; box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
+  .inputbar button:disabled { background: #d1d5db; cursor: not-allowed; box-shadow: none; }
 </style>
 </head>
 <body>
 
 <div id="pickView">
   <h2>请选择测评量表</h2>
-  <a href="daily.html" class="scale-btn" style="display:block;text-decoration:none;color:#fff;margin-top:28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
-    今天活得怎么样?<br><small style="opacity:.9">不用做题 · 随便聊聊今天,生成温柔小结</small>
+  
+  <a href="daily.html" class="daily-btn">
+    今天活得怎么样?<br>
+    <small>不用做题 · 随便聊聊今天，生成温柔小结</small>
   </a>
-  <div class="scale-grid" style="margin-top:16px;">
+  
+  <div class="scale-grid">
     <button class="scale-btn" data-id="SAS">SAS<br><small>焦虑自评</small></button>
     <button class="scale-btn" data-id="SDS">SDS<br><small>抑郁自评</small></button>
     <button class="scale-btn" data-id="PHQ9">PHQ-9<br><small>抑郁筛查</small></button>
@@ -55,12 +125,16 @@
 
 <div id="chatView">
   <div class="header">
-    <div style="display:flex; align-items:center; gap:10px;">
+    <div style="display:flex; align-items:center; gap:12px;">
       <button id="backBtn" class="back-btn">← 返回</button>
-      <div><h1 id="scaleName">心理测评</h1><div class="sub">情绪筛查 · 非医学诊断</div></div>
+      <div>
+        <h1 id="scaleName">心理测评</h1>
+        <div class="sub">情绪筛查 · 非医学诊断</div>
+      </div>
     </div>
-    <div class="progress" id="progress"></div>
+    <div class="progress" id="progress" style="display:none;"></div>
   </div>
+  
   <div id="messages"></div>
   
   <div id="optionsBar">
@@ -77,24 +151,66 @@
 </div>
 
 <script>
-let sessionId = null, finished = false;
-const inputEl = document.getElementById('input'), 
-      sendBtn = document.getElementById('sendBtn'),
-      messagesEl = document.getElementById('messages'),
-      optionsBar = document.getElementById('optionsBar');
+// —— 全局状态 ——
+let sessionId = null;
+let totalItems = 0;
+let finished = false;
 
-// 1. 返回按钮逻辑：重置一切
+const messagesEl = document.getElementById('messages');
+const inputEl    = document.getElementById('input');
+const sendBtn    = document.getElementById('sendBtn');
+const optionsBar = document.getElementById('optionsBar');
+const progressEl = document.getElementById('progress');
+
+// —— UI 更新辅助函数 ——
+function addMsg(text, who) {
+  const div = document.createElement('div');
+  div.className = `msg ${who}`;
+  div.innerHTML = `<div class="bubble"></div>`;
+  div.querySelector('.bubble').textContent = text;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function addCrisis(text) {
+  const div = document.createElement('div');
+  div.className = 'crisis';
+  div.textContent = text;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function setProgress(n) {
+  if (totalItems > 0) {
+    progressEl.style.display = 'block';
+    progressEl.textContent = `${n} / ${totalItems}`;
+  } else {
+    progressEl.style.display = 'none';
+  }
+}
+
+// —— 1. 返回主页逻辑 (保留确认拦截) ——
 document.getElementById('backBtn').addEventListener('click', () => {
-    document.getElementById('chatView').style.display = 'none';
-    document.getElementById('pickView').style.display = 'block';
-    messagesEl.innerHTML = '';
-    sessionId = null;
-    finished = false;
-    optionsBar.style.display = 'flex';
-    sendBtn.disabled = false;
+  if (sessionId && !finished) {
+    if (!confirm('返回主页将结束当前测评，确定吗？')) return;
+  }
+  // 重置状态
+  sessionId  = null;
+  totalItems = 0;
+  finished   = false;
+  
+  // 重置 UI
+  messagesEl.innerHTML = '';
+  inputEl.value = '';
+  sendBtn.disabled = false;
+  optionsBar.style.display = 'flex';
+  setProgress(0);
+  
+  document.getElementById('chatView').style.display = 'none';
+  document.getElementById('pickView').style.display = 'block';
 });
 
-// 2. 选项点击逻辑
+// —— 2. 选项点击逻辑：将按钮文字填入输入框并自动发送 ——
 document.querySelectorAll('.opt-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     inputEl.value = btn.textContent;
@@ -102,53 +218,101 @@ document.querySelectorAll('.opt-btn').forEach(btn => {
   });
 });
 
+// —— 3. 核心发送逻辑 ——
 async function send() {
   const text = inputEl.value.trim();
   if (!text || finished || !sessionId) return;
+  
   addMsg(text, 'user');
   inputEl.value = '';
   sendBtn.disabled = true;
+  
   try {
     const res = await fetch(`/api/session/${sessionId}/turn`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ text }),
     });
     const data = await res.json();
+    
+    // 错误处理保留
+    if (!res.ok || data.error) { 
+      addMsg(data.error || '出错了', 'bot'); 
+      return; 
+    }
+
+    // 回复与进度更新
     if (data.reply) addMsg(data.reply, 'bot');
+    if (data.answered_count !== undefined) setProgress(data.answered_count);
+
+    // 终态判断
     if (data.status === 'completed') {
       finished = true;
-      optionsBar.style.display = 'none';
-      if(data.score_result) addMsg(`测评完成：${data.score_result.severity_label}`, 'bot');
+      optionsBar.style.display = 'none'; // 测评结束隐藏选项
+      const r = data.score_result;
+      if (r) {
+        addMsg(`测评完成。总分 ${r.total_score ?? r.score ?? ''}，${r.severity_label ?? r.level ?? ''}`, 'bot');
+      }
+    } else if (data.status === 'crisis' || data.status === 'terminated') {
+      finished = true;
+      optionsBar.style.display = 'none'; // 危机状态也隐藏选项
+      addCrisis('已转入危机关怀，测评中断');
     }
-  } catch (e) { alert('网络错误'); } finally { sendBtn.disabled = finished; }
+  } catch (e) { 
+    addMsg('网络错误：' + e.message, 'bot'); 
+  } finally { 
+    sendBtn.disabled = finished; 
+  }
 }
 
-function addMsg(text, who) {
-  const div = document.createElement('div');
-  div.className = `msg ${who}`;
-  div.innerHTML = `<div class="bubble">${text}</div>`;
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
+// —— 绑定发送事件 (包含 Enter 键支持) ——
 sendBtn.addEventListener('click', send);
+inputEl.addEventListener('keydown', e => { 
+  if (e.key === 'Enter') send(); 
+});
 
+// —— 4. 量表启动逻辑 ——
 async function startScale(scaleId) {
-  const res = await fetch('/api/session', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({scale_id: scaleId})});
-  const data = await res.json();
-  sessionId = data.session_id;
-  document.getElementById('scaleName').innerText = data.scale_name || '心理测评';
-  document.getElementById('pickView').style.display = 'none';
-  document.getElementById('chatView').style.display = 'flex';
-  addMsg(data.reply, 'bot');
+  try {
+    const res = await fetch('/api/session', {
+      method: 'POST', 
+      headers: {'Content-Type': 'application/json'}, 
+      body: JSON.stringify({scale_id: scaleId})
+    });
+    const data = await res.json();
+    
+    if (!res.ok || data.error) { 
+      alert(data.error || '量表加载失败'); 
+      return; 
+    }
+
+    sessionId = data.session_id;
+    totalItems = data.total_items || 0;
+    finished = false;
+    sendBtn.disabled = false;
+    optionsBar.style.display = 'flex';
+    
+    document.getElementById('scaleName').innerText = data.scale_name || '心理测评';
+    document.getElementById('pickView').style.display = 'none';
+    document.getElementById('chatView').style.display = 'flex';
+    
+    setProgress(0);
+    addMsg(data.reply, 'bot');
+    inputEl.focus();
+  } catch (e) {
+    alert('网络错误：' + e.message);
+  }
 }
+
 document.querySelectorAll('.scale-btn[data-id]').forEach(btn => {
   btn.addEventListener('click', () => startScale(btn.dataset.id));
 });
-// 来自「今天活得怎么样」日报的推荐路由:index.html?scale=SDS 直接进对应问卷
+
+// 来自「今天活得怎么样」日报的推荐路由: index.html?scale=SDS 直接进对应问卷
 const _preScale = new URLSearchParams(location.search).get('scale');
-if (_preScale) startScale(_preScale);
+if (_preScale) {
+  startScale(_preScale);
+}
 </script>
 </body>
 </html>
