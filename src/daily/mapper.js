@@ -26,34 +26,41 @@ function buildMapperMessages({ allowedDimensions, snippets, dimMeta = {}, timeWi
 候选片段:
 ${numbered}
 
-只输出一个 JSON 对象 {"items": [...]},items 每个元素对应一条你能可信映射的片段,字段:
+只输出一个 JSON 对象 {"items": [...]},items 每个元素对应一条你判断有情绪指向的片段,字段:
 ${JSON.stringify(OUTPUT_SCHEMA_HINT, null, 2)}
 
-若某片段映射不到 allowed_dimensions,就不要为它产出元素(宁缺毋滥,无关闲聊应返回空数组)。
+【判断取向:宁可多虑,不要漏掉苗头】只要一句话流露出朝某个维度的负面苗头——哪怕轻微、含蓄、只是语气不对劲——就为它产出一条,并用 confidence 如实表达你的把握(没把握就给低分,比如 0.3-0.5),而不是因为"不够明显"就丢掉。真正中性、事务性、无关的闲聊(天气、吃饭、物流)才返回空。宁可标一条低置信的信号让后续去权衡,也不要让一个真实的情绪苗头在这里消失。
 若读到明确的轻生/自伤/想消失意图,在该元素额外加 "crisis_flag": true(兜底提醒,不替代系统危机判定)。
 只输出 JSON,不要 Markdown 代码块,不要解释。`;
   return { system: sys, messages: [{ role: 'user', content: user }] };
 }
 
 function SYSTEM_PROMPT(allowedDimensions, dimMeta, timeWindow) {
-  const dimList = allowedDimensions
-    .map(d => `- ${d}${dimMeta[d] ? `(${dimMeta[d]})` : ''}`)
-    .join('\n');
+  const dimList = allowedDimensions.map(d => {
+    const m = dimMeta[d] || {};
+    const label = typeof m === 'string' ? m : (m.label || '');
+    const text = (m && m.text) ? ` —— 量表原意:${m.text}` : '';
+    const plain = (m && m.plain_desc) ? `(通俗说:${m.plain_desc})` : '';
+    return `- ${d}(${label})${text}${plain}`;
+  }).join('\n');
   return `你是一个情绪信号的"映射器",服务于一个心理自评项目的被动分析功能(已获用户知情同意)。
-你的唯一任务:把日常聊天里和身心状态有关的片段,映射到给定的量表维度上。你不是医生,不下诊断,不算分数。
+你的任务:把日常聊天里和身心状态有关的片段,对照下面这些真实量表维度,判断它更像哪一个维度的苗头。你不是医生,不下诊断,不算分数。
 
 【时间口径】只关注 ${timeWindow} 内的状态;明显在讲很久以前的事,降低 confidence。
 
-【允许的维度 allowed_dimensions(只能逐字挑选,绝不可改写或新造)】
+【维度依据来自真实量表(逐字使用其 id,绝不可改写或新造)】
 ${dimList}
 
-【硬规则】
-1. dimension 必须与上面某一项逐字一致;映射不到就丢弃,绝不凑数。一句话同时含两个清晰维度可拆成两条。
-2. 严禁发明新维度、新分类、新标签。
-3. intensity_hint(0-3)只反映"这一句话本身"能支撑的强度:0几乎没指向/1轻微一提/2明确具体/3强烈且具体。情绪激动不等于高分,看信息量。
-4. valence:negative=朝症状方向;positive=好转/反向("终于睡好了");ambiguous=反讽、否定、客套("还好啦""没事"),给 ambiguous 并压低 confidence。
-5. confidence(0-1):措辞越具体越贴近维度越高;靠猜的压到 0.4 以下。
-6. evidence 用观察性、非评判措辞复述依据(如"提到凌晨醒、睡不回去"),禁止"抑郁""焦虑症""病""障碍"等诊断词,也不要给建议。
+【判断方式:根据量表语义,充分自由地判断,但只在这些维度内】
+- 请对照每个维度的"量表原意/通俗说"去理解用户的话,用你的语义判断能力,而不是死抠字面关键词。用户没用任何症状词、只是语气低落或话里有话,也要能读出来。
+- 这是被动情绪预警,取向是"宁可多虑不可漏":轻微、含蓄、模糊的负面苗头也值得标一条,把握不足就给低 confidence,由后续环节去权衡,不要在这里就把它丢掉。
+
+【硬规则(自由度的边界,不可越)】
+1. dimension 必须与上面某一项逐字一致。你可以自由判断"像不像",但绝不能发明新维度、新分类、新标签——映射不进这些维度的,才留空。
+2. intensity_hint(0-3):这句话本身能支撑的强度。0几乎没指向/1轻微一提/2明确具体/3强烈且具体。情绪激动不等于高分,看信息量;宁可给低强度也别漏标。
+3. valence:negative=朝症状方向;positive=好转/反向("终于睡好了");ambiguous=反讽、否定、客套("还好啦""没事"),给 ambiguous 并压低 confidence(但仍然标出来,别丢)。
+4. confidence(0-1):有多大把握这条映射成立。把握小就给小值(0.3-0.5),这正是"多虑但诚实"的表达方式。
+5. evidence 用观察性、非评判措辞复述依据(如"提到又要上班又要考试、觉得动不了"),禁止"抑郁""焦虑症""病""障碍"等诊断词,也不要给建议。
 
 【危机兜底】若含明确轻生/自伤/想消失意图,加 "crisis_flag": true。这只是冗余提醒;真正处置由系统确定性通道在你之前已对原文跑过,你的标记只会促成额外干预,不会让系统少做任何事。
 
