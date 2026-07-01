@@ -7,48 +7,67 @@
 <style>
   * { box-sizing: border-box; }
   body { margin:0; font-family:system-ui,"Microsoft YaHei",sans-serif; background:#eef0f6; height:100vh; display:flex; flex-direction:column; }
-  .header { background:#fff; padding:14px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
-  .header h1 { font-size:18px; margin:0; }
-  .header .sub { font-size:12px; color:#888; }
-  .back-btn { border:none; background:#f1f1f4; color:#555; padding:8px 14px; border-radius:8px; font-size:14px; cursor:pointer; text-decoration:none; }
+  .header { background:#fff; padding:14px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0; }
+  .header h1 { font-size:18px; margin:0; color: #111827; }
+  .header .sub { font-size:12px; color:#888; margin-top: 2px; }
+  .back-btn { border:none; background:#f1f1f4; color:#555; padding:8px 14px; border-radius:8px; font-size:14px; cursor:pointer; text-decoration:none; font-weight: 500; transition: background 0.2s; }
+  .back-btn:hover { background: #e5e7eb; color: #111827; }
   .wrap { max-width:640px; margin:0 auto; width:100%; flex:1; display:flex; flex-direction:column; overflow:hidden; }
 
   /* 同意门 */
-  #consentView { padding:40px 24px; text-align:center; }
-  #consentView p { color:#555; line-height:1.7; font-size:14px; }
-  .primary { border:none; background:#6366f1; color:#fff; padding:12px 24px; border-radius:10px; font-size:15px; cursor:pointer; margin-top:16px; }
-  .ghost { border:1px solid #ccc; background:#fff; color:#666; padding:12px 20px; border-radius:10px; font-size:14px; cursor:pointer; margin-left:8px; }
+  #consentView { padding:60px 24px; text-align:center; }
+  #consentView h2 { color:#1f2937; }
+  #consentView p { color:#555; line-height:1.7; font-size:15px; margin-bottom: 30px; }
+  .primary { border:none; background:#6366f1; color:#fff; padding:12px 24px; border-radius:10px; font-size:15px; cursor:pointer; font-weight: 500; transition: all 0.2s; }
+  .primary:hover { background: #4f46e5; box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
+  .ghost { border:1px solid #ccc; background:#fff; color:#666; padding:11px 20px; border-radius:10px; font-size:14px; cursor:pointer; margin-left:8px; text-decoration: none; transition: all 0.2s; }
+  .ghost:hover { background: #f9fafb; color: #111827; }
 
-  #chatView { display:none; flex:1; flex-direction:column; overflow:hidden; }
-  #messages { flex:1; overflow-y:auto; padding:20px; }
-  .msg { margin:10px 0; display:flex; }
+  /* 聊天区 */
+  #chatView { display:none; flex:1; flex-direction:column; overflow:hidden; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.02); }
+  #messages { flex:1; overflow-y:auto; padding:20px; background: #fafafa; }
+  .msg { margin:12px 0; display:flex; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .msg.bot { justify-content:flex-start; }
   .msg.user { justify-content:flex-end; }
-  .bubble { max-width:78%; padding:12px 16px; border-radius:14px; line-height:1.55; white-space:pre-wrap; }
-  .bot .bubble { background:#fff; color:#333; }
-  .user .bubble { background:#6366f1; color:#fff; }
-  .report .bubble { background:#fff; color:#333; border:1px solid #e0e2ec; }
-  .crisis .bubble { background:#fff4f4; color:#8a1f1f; border:1px solid #f3c4c4; }
-  .rec-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  .rec-btn { border:1px solid #6366f1; background:#fff; color:#6366f1; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px; }
-  .rec-btn:hover { background:#6366f1; color:#fff; }
+  
+  /* 气泡样式（利用 white-space:pre-wrap 完美兼容换行符 \n） */
+  .bubble { max-width:85%; padding:12px 16px; border-radius:14px; line-height:1.6; font-size: 15px; white-space:pre-wrap; word-wrap: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .bot .bubble { background:#fff; color:#1f2937; border-bottom-left-radius: 4px; }
+  .user .bubble { background:#6366f1; color:#fff; border-bottom-right-radius: 4px; }
+  
+  /* ✨ 打字机光标闪烁特效 */
+  .bubble.typing::after { content: ' ▍'; animation: blink 1s step-end infinite; color: #a5b4fc; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-  .inputbar { display:flex; padding:14px; background:#fff; border-top:1px solid #e5e7eb; gap:10px; }
-  .inputbar input { flex:1; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; }
-  .inputbar button { padding:0 18px; border:none; border-radius:10px; background:#6366f1; color:#fff; cursor:pointer; }
+  /* 报告与危机样式 */
+  .report .bubble { background:#fff; color:#333; border:1px solid #e5e7eb; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+  .crisis .bubble { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+  
+  .rec-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top: 14px; border-top: 1px dashed #e5e7eb; }
+  .rec-btn { border:1px solid #6366f1; background:#fff; color:#6366f1; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight: 500; transition: all 0.2s; }
+  .rec-btn:hover { background:#f4f6ff; border-color: #4f46e5; }
+  .rec-btn:active { transform: scale(0.97); }
+
+  /* 底部输入框 */
+  .inputbar { display:flex; padding:14px 20px 20px 20px; background:#fff; border-top:1px solid #f3f4f6; gap:10px; flex-shrink: 0; }
+  .inputbar input { flex:1; padding:12px 16px; border:1px solid #e5e7eb; border-radius:24px; font-size:15px; outline: none; background: #f9fafb; transition: all 0.2s; }
+  .inputbar input:focus { background: #fff; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+  .inputbar button { padding:0 20px; border:none; border-radius:24px; background:#6366f1; color:#fff; cursor:pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
   .inputbar .gen { background:#10b981; }
+  .inputbar button:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(0,0,0,0.15); filter: brightness(1.05); }
+  .inputbar button:disabled { background:#d1d5db; cursor:not-allowed; box-shadow: none; }
 </style>
 </head>
 <body>
 <div class="header">
-  <div style="display:flex; align-items:center; gap:10px;">
+  <div style="display:flex; align-items:center; gap:12px;">
     <a class="back-btn" href="index.html">← 返回</a>
     <div><h1>今天活得怎么样?</h1><div class="sub">随便聊聊今天 · 非医学诊断</div></div>
   </div>
 </div>
 
 <div class="wrap">
-  <!-- 知情同意 -->
   <div id="consentView">
     <h2>聊之前,先说清楚</h2>
     <p>这里你可以随便说说今天或最近的状态。<br>
@@ -61,7 +80,6 @@
     </div>
   </div>
 
-  <!-- 聊天 -->
   <div id="chatView">
     <div id="messages"></div>
     <div class="inputbar">
@@ -75,44 +93,81 @@
 <script>
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('input');
-const convo = []; // [{role, content}]
-//const ACKS = ['嗯,我在听。', '谢谢你愿意说这些。', '我记下了,继续说。', '辛苦了。还有吗?'];
+const sendBtn = document.getElementById('sendBtn');
+const genBtn = document.getElementById('genBtn');
 
-document.getElementById('agreeBtn').onclick = () => {
+const convo = []; // [{role, content}]
+let isTyping = false; // ✨ 全局打字锁
+
+// 控制按钮可用状态
+function setUIState(disabled) {
+  sendBtn.disabled = disabled;
+  genBtn.disabled = disabled;
+}
+
+document.getElementById('agreeBtn').onclick = async () => {
   document.getElementById('consentView').style.display = 'none';
   document.getElementById('chatView').style.display = 'flex';
-  addMsg('我在呢。今天过得怎么样?睡得好不好,累不累,心里有没有压着什么都行。', 'bot');
+  // ✨ 开场白使用打字机效果
+  await addMsg('我在呢。今天过得怎么样?睡得好不好,累不累,心里有没有压着什么都行。', 'bot', true);
+  inputEl.focus();
 };
 
-function addMsg(text, who, extra) {
-  const div = document.createElement('div');
-  div.className = `msg ${who}`;
-  const safe = String(text).replace(/[<>]/g, '');
-  div.innerHTML = `<div class="bubble">${safe.replace(/\n/g,'<br>')}</div>`;
-  if (extra) div.querySelector('.bubble').appendChild(extra);
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
+// ✨ 核心气泡渲染器（支持逐字打字、附加按钮节点、自定义 class）
+function addMsg(text, who, typing = false, extraNode = null, customClass = '') {
+  return new Promise(resolve => {
+    const div = document.createElement('div');
+    // 如果有额外 class，拼接到外层
+    div.className = `msg ${who} ${customClass}`.trim();
+    div.innerHTML = `<div class="bubble"></div>`;
+    const bubble = div.querySelector('.bubble');
+    messagesEl.appendChild(div);
 
-//function send() {
-//  const text = inputEl.value.trim();
-//  if (!text) return;
-  //addMsg(text, 'user');
-  //convo.push({ role: 'user', content: text, ts: Date.now() });
-  //inputEl.value = '';
-  // 轻量共情回应(真·对话可在后端接 deepseekReply,这里仅作陪伴占位)
-  //setTimeout(() => addMsg(ACKS[Math.floor(Math.random()*ACKS.length)], 'bot'), 250);
-//}
+    if (typing && who === 'bot') {
+      isTyping = true;
+      setUIState(true); // 禁用按钮防止打断
+      bubble.classList.add('typing');
+      
+      let i = 0;
+      function typeNext() {
+        if (i < text.length) {
+          bubble.textContent += text.charAt(i); // 依赖 CSS 的 pre-wrap 处理 \n
+          i++;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          setTimeout(typeNext, 30); // 打字速度控制
+        } else {
+          bubble.classList.remove('typing');
+          if (extraNode) bubble.appendChild(extraNode); // 打完字后才展示下方按钮
+          isTyping = false;
+          setUIState(false);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          resolve();
+        }
+      }
+      typeNext();
+    } else {
+      bubble.textContent = text;
+      if (extraNode) bubble.appendChild(extraNode);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      resolve();
+    }
+  });
+}
 
 function send() {
+  if (isTyping) return; // 防误触
   return sendReal();
 }
+
 async function sendReal() {
   const text = inputEl.value.trim();
   if (!text) return;
-  addMsg(text, 'user');
+  
+  await addMsg(text, 'user');
   convo.push({ role: 'user', content: text, ts: Date.now() });
   inputEl.value = '';
+  setUIState(true); // 等待请求时禁用
+  
   try {
     const res = await fetch('/api/daily/reply', {
       method: 'POST',
@@ -120,48 +175,62 @@ async function sendReal() {
       body: JSON.stringify({ messages: convo }),
     });
     const data = await res.json();
+    
     if (data.crisis) {
-      renderCrisis({ text: data.reply });
+      await renderCrisis({ text: data.reply });
       convo.push({ role: 'assistant', content: data.reply });
       return;
     }
-    addMsg(data.reply, 'bot');
+    
+    // ✨ 正常回复异步打字
+    await addMsg(data.reply, 'bot', true);
     convo.push({ role: 'assistant', content: data.reply });
   } catch (e) {
-    addMsg('我在听,你继续说。', 'bot');
+    await addMsg('我在听,你继续说。', 'bot', true);
     convo.push({ role:'assistant', content:'我在呢。今天过得怎么样?睡得好不好,累不累,心里有没有压着什么都行。' });
+  } finally {
+    if (!isTyping) setUIState(false);
   }
 }
 
 async function generate() {
-  if (convo.length === 0) { addMsg('还没聊到什么呢,先随便说两句今天的事吧。', 'bot'); return; }
-  addMsg('让我回顾一下我们今天聊的…', 'bot');
+  if (isTyping) return;
+  if (convo.length === 0) { 
+    await addMsg('还没聊到什么呢,先随便说两句今天的事吧。', 'bot', true); 
+    return; 
+  }
+  
+  await addMsg('让我回顾一下我们今天聊的…', 'bot', true);
+  setUIState(true);
+
   try {
     const res = await fetch('/api/daily/report', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: convo, consent: true }),
     });
     const data = await res.json();
-    if (data.status === 'crisis') { renderCrisis(data.report); return; }
-    renderReport(data.report);
-  } catch (e) { addMsg('网络好像出了点问题,待会儿再试试?', 'bot'); }
+    
+    if (data.status === 'crisis') { 
+      await renderCrisis(data.report); 
+      return; 
+    }
+    await renderReport(data.report);
+  } catch (e) { 
+    await addMsg('网络好像出了点问题,待会儿再试试?', 'bot', true); 
+  } finally {
+    if (!isTyping) setUIState(false);
+  }
 }
 
-function renderCrisis(report) {
-  const div = document.createElement('div');
-  div.className = 'msg crisis report';
-  div.innerHTML = `<div class="bubble">${report.text.replace(/\n/g,'<br>')}</div>`;
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+// ✨ 渲染危机报告（打字机模式）
+async function renderCrisis(report) {
+  await addMsg(report.text, 'bot', true, null, 'crisis report');
 }
 
-function renderReport(report) {
-  const div = document.createElement('div');
-  div.className = 'msg report';
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
-  bubble.innerHTML = report.text.replace(/\n/g, '<br>');
-  // 推荐路由按钮 → 跳到正式问卷,预选量表
+// ✨ 渲染小结报告（打字机模式 + 推荐按钮）
+async function renderReport(report) {
+  let extraNode = null;
+  // 生成下方的推荐跳转按钮
   if (report.recommendations && report.recommendations.length) {
     const box = document.createElement('div');
     box.className = 'rec-btns';
@@ -172,16 +241,18 @@ function renderReport(report) {
       b.onclick = () => { window.location = `index.html?scale=${encodeURIComponent(r.scale_id)}`; };
       box.appendChild(b);
     });
-    bubble.appendChild(box);
+    extraNode = box;
   }
-  div.appendChild(bubble);
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  
+  // 利用重构后的 addMsg 异步渲染报告文本，结束后挂载 extraNode
+  await addMsg(report.text, 'bot', true, extraNode, 'report');
 }
 
 document.getElementById('sendBtn').onclick = send;
 document.getElementById('genBtn').onclick = generate;
-inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+inputEl.addEventListener('keydown', e => { 
+  if (e.key === 'Enter' && !isTyping) send(); 
+});
 </script>
 </body>
 </html>
