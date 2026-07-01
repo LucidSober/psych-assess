@@ -1,104 +1,165 @@
-// src/daily/mapper.js
-// LLM 细筛 prompt 构造 + 输出严格校验。把 extractor 的候选片段映射成结构化结果:
-//   { snippet, dimension, valence, intensity_hint, confidence, evidence }
-// 不调用 LLM(交给 llmDaily),不判分(交给 aggregator/softScore),
-// 不做危机权威判定(crisis 由 extractor 的确定性旁路在 LLM 之前先扫一遍)。
+// src/daily/llmDaily.js
+// 给 extractor 用的"细筛"实现。两套同签名:
+//   deepseekDailyMap —— 真·LLM,复用 llmDeepSeek 的 callDeepSeek + mapper 的 prompt。
+//   stubDailyMap     —— 离线启发式,无 key 也能跑测试/demo。它只是 LLM 的廉价替身。
+// 签名: async ({ snippets, allowedDimensions, dimMeta, signals, timeWindow }) => { items, crisis }
 
-const OUTPUT_SCHEMA_HINT = {
-  snippet: '原话(尽量保留用户原措辞,可裁到最相关的一两句)',
-  dimension: '必须从 allowed_dimensions 里逐字选一个;选不出就丢弃该片段',
-  valence: 'negative | positive | ambiguous',
-  intensity_hint: '0-3 整数:仅这一句话本身能支撑的强度,不是当天结论',
-  confidence: '0-1 小数:这条映射有多可信',
-  evidence: '一句话说明依据,用观察性措辞,禁止诊断词',
-};
+const { buildMapperMessages, parseMapperOutput } = require('./mapper');
 
-function buildMapperMessages({ allowedDimensions, snippets, dimMeta = {}, timeWindow = '最近两周' }) {
-  if (!Array.isArray(allowedDimensions) || allowedDimensions.length === 0)
-    throw new Error('mapper: allowedDimensions 不能为空,必须从 signals.json 注入真实维度 id');
-  const sys = SYSTEM_PROMPT(allowedDimensions, dimMeta, timeWindow);
-  if (!Array.isArray(snippets) || snippets.length === 0) return { system: sys, messages: [] };
+// 与 llmDeepSeek 同款危机正则:细筛只能"加判",这里只作冗余兜底,真正旁路在 extractor。
+const CRISIS_REGEX = /想死|不想活|不想活了|自杀|结束生命|活着没意思|活着没意义|轻生|了结自己|不想醒|消失算了/;
 
-  const numbered = snippets.map((s, i) => `${i + 1}. ${oneLine(s)}`).join('\n');
-  const user =
-`下面是从今天对话里粗筛出的候选片段,逐条判断并映射。
-
-候选片段:
-${numbered}
-
-只输出一个 JSON 对象 {"items": [...]},items 每个元素对应一条你判断有情绪指向的片段,字段:
-${JSON.stringify(OUTPUT_SCHEMA_HINT, null, 2)}
-
-【判断取向:宁可多虑,不要漏掉苗头】只要一句话流露出朝某个维度的负面苗头——哪怕轻微、含蓄、只是语气不对劲——就为它产出一条,并用 confidence 如实表达你的把握(没把握就给低分,比如 0.3-0.5),而不是因为"不够明显"就丢掉。真正中性、事务性、无关的闲聊(天气、吃饭、物流)才返回空。宁可标一条低置信的信号让后续去权衡,也不要让一个真实的情绪苗头在这里消失。
-若读到明确的轻生/自伤/想消失意图,在该元素额外加 "crisis_flag": true(兜底提醒,不替代系统危机判定)。
-只输出 JSON,不要 Markdown 代码块,不要解释。`;
-  return { system: sys, messages: [{ role: 'user', content: user }] };
-}
-
-function SYSTEM_PROMPT(allowedDimensions, dimMeta, timeWindow) {
-  const dimList = allowedDimensions.map(d => {
-    const m = dimMeta[d] || {};
-    const label = typeof m === 'string' ? m : (m.label || '');
-    const text = (m && m.text) ? ` —— 量表原意:${m.text}` : '';
-    const plain = (m && m.plain_desc) ? `(通俗说:${m.plain_desc})` : '';
-    return `- ${d}(${label})${text}${plain}`;
-  }).join('\n');
-  return `你是一个情绪信号的"映射器",服务于一个心理自评项目的被动分析功能(已获用户知情同意)。
-你的任务:把日常聊天里和身心状态有关的片段,对照下面这些真实量表维度,判断它更像哪一个维度的苗头。你不是医生,不下诊断,不算分数。
-
-【时间口径】只关注 ${timeWindow} 内的状态;明显在讲很久以前的事,降低 confidence。
-
-【维度依据来自真实量表(逐字使用其 id,绝不可改写或新造)】
-${dimList}
-
-【判断方式:根据量表语义,充分自由地判断,但只在这些维度内】
-- 请对照每个维度的"量表原意/通俗说"去理解用户的话,用你的语义判断能力,而不是死抠字面关键词。用户没用任何症状词、只是语气低落或话里有话,也要能读出来。
-- 这是被动情绪预警,取向是"宁可多虑不可漏":轻微、含蓄、模糊的负面苗头也值得标一条,把握不足就给低 confidence,由后续环节去权衡,不要在这里就把它丢掉。
-
-【硬规则(自由度的边界,不可越)】
-1. dimension 必须与上面某一项逐字一致。你可以自由判断"像不像",但绝不能发明新维度、新分类、新标签——映射不进这些维度的,才留空。
-2. intensity_hint(0-3):这句话本身能支撑的强度。0几乎没指向/1轻微一提/2明确具体/3强烈且具体。情绪激动不等于高分,看信息量;宁可给低强度也别漏标。
-3. valence:negative=朝症状方向;positive=好转/反向("终于睡好了");ambiguous=反讽、否定、客套("还好啦""没事"),给 ambiguous 并压低 confidence(但仍然标出来,别丢)。
-4. confidence(0-1):有多大把握这条映射成立。把握小就给小值(0.3-0.5),这正是"多虑但诚实"的表达方式。
-5. evidence 用观察性、非评判措辞复述依据(如"提到又要上班又要考试、觉得动不了"),禁止"抑郁""焦虑症""病""障碍"等诊断词,也不要给建议。
-
-【危机兜底】若含明确轻生/自伤/想消失意图,加 "crisis_flag": true。这只是冗余提醒;真正处置由系统确定性通道在你之前已对原文跑过,你的标记只会促成额外干预,不会让系统少做任何事。
-
-只输出 JSON,不要任何额外文字。`;
-}
-
-const VALID_VALENCE = new Set(['negative', 'positive', 'ambiguous']);
-
-// 解析并严格校验 LLM 输出;脏数据丢弃而非猜补。允许 {items:[...]} 或裸数组。
-function parseMapperOutput(raw, allowedDimensions) {
-  const allow = new Set(allowedDimensions);
-  let obj;
-  try { obj = JSON.parse(stripFences(raw)); }
-  catch (_) { return { items: [], crisis: false, dropped: 0, parseError: true }; }
-
-  let arr = Array.isArray(obj) ? obj : (obj && Array.isArray(obj.items) ? obj.items : [obj]);
-  let crisis = false, dropped = 0;
-  const items = [];
-  for (const o of arr) {
-    if (o && o.crisis_flag === true) crisis = true;        // 任一条喊危机即置位
-    if (!o || typeof o !== 'object') { dropped++; continue; }
-    if (!allow.has(o.dimension)) { dropped++; continue; }  // 越界维度直接丢
-    if (!VALID_VALENCE.has(o.valence)) { dropped++; continue; }
-    items.push({
-      snippet: String(o.snippet || '').slice(0, 200),
-      dimension: o.dimension,
-      valence: o.valence,
-      intensity_hint: clampInt(o.intensity_hint, 0, 3),
-      confidence: clampFloat(o.confidence, 0, 1),
-      evidence: String(o.evidence || '').slice(0, 200),
-    });
+// ---------- 真·LLM ----------
+async function deepseekDailyMap({ snippets, allowedDimensions, dimMeta, signals, timeWindow }) {
+  const { callDeepSeek } = require('../llmDeepSeek');
+  const { system, messages } = buildMapperMessages({ allowedDimensions, snippets, dimMeta, timeWindow });
+  if (messages.length === 0) return { items: [], crisis: false };
+  let content = '';
+  try {
+    content = await callDeepSeek([{ role: 'system', content: system }, ...messages],
+      { timeoutMs: 15000, json: true });
+  } catch (e) {
+    // 失败不清零:退回词典/语气的启发式召回,至少别把苗头全丢了(取向:宁可多虑)。危机正则仍兜底。
+    console.warn(`[deepseekDailyMap] 降级到启发式召回(${e.message})`);
+    const fb = await stubDailyMap({ snippets, allowedDimensions, signals });
+    fb.crisis = fb.crisis || snippets.some(s => CRISIS_REGEX.test(s));
+    return fb;
   }
-  return { items, crisis, dropped };
+  const out = parseMapperOutput(content, allowedDimensions);
+  out.crisis = out.crisis || snippets.some(s => CRISIS_REGEX.test(s));
+  return out;
 }
 
-function oneLine(s) { return String(s).replace(/\s+/g, ' ').trim(); }
-function stripFences(t) { return String(t).replace(/```(?:json)?/gi, '').trim(); }
-function clampInt(v, lo, hi) { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo; }
-function clampFloat(v, lo, hi) { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo; }
+// ---------- 离线启发式替身 ----------
+// 仅供无 DeepSeek 时跑测试/demo。能力弱于真 LLM,但覆盖两件事:
+//  1) 词典命中 → 结构化;2) 无关键词但语气低落/焦虑的句子 → 也能捞到(模拟 LLM 的语气判断)。
+const TONE_LEXICON = [
+  // [正则, 维度, valence, intensity, evidence]
+  [/(空壳|行尸走肉|没有灵魂|像个机器)/, 'PHQ9_item2', 'negative', 2, '描述空洞/抽离感'],
+  [/(撑不住|扛不住|快崩溃|绷不住|顶不住)/, 'PHQ9_item2', 'negative', 3, '描述濒临崩溃'],
+  [/(活着.*(没意义|没意思|累)|没什么意思)/, 'PHQ9_item2', 'negative', 3, '描述意义感丧失'],
+  [/(内耗|精神内耗|被生活推着走)/, 'PHQ9_item2', 'negative', 2, '描述持续消耗/心累'],
+  [/(没动力|丧失.{0,2}动力|提不起动力|不想动|动不了)/, 'PHQ9_item1', 'negative', 2, '描述动力缺失'],
+  [/(不想上班|不想上学|不想去公司)/, 'PHQ9_item1', 'negative', 1, '描述回避/提不起劲'],
+  [/(喘不过气|心口压|胸口闷|提着一口气)/, 'GAD7_item1', 'negative', 2, '描述躯体化焦虑'],
+  [/(一整天.*(就这么|晃|耗)|什么都没做成)/, 'PHQ9_item4', 'negative', 1, '描述空耗/无力'],
+  [/(谁都不想理|不想见人|把自己关)/, 'PHQ9_item1', 'negative', 2, '描述社交退缩'],
+];
 
-module.exports = { buildMapperMessages, parseMapperOutput, OUTPUT_SCHEMA_HINT };
+async function stubDailyMap({ snippets, allowedDimensions, signals }) {
+  const allow = new Set(allowedDimensions);
+  const items = [];
+  let crisis = false;
+  const dict = flattenSignals(signals);
+
+  for (const snip of snippets) {
+    const text = String(snip);
+    if (CRISIS_REGEX.test(text)) crisis = true;
+
+    let matched = false;
+    // 1) 词典命中
+    for (const sig of dict) {
+      if (!allow.has(sig.dimension)) continue;
+      if (sig.re.test(text)) {
+        items.push({
+          snippet: text.slice(0, 200), dimension: sig.dimension, valence: sig.valence,
+          intensity_hint: sig.intensity_prior, confidence: 0.75, evidence: sig.evidence_hint,
+        });
+        matched = true;
+        break; // 一句话取最先命中的一个维度,避免一句被重复计
+      }
+    }
+    if (matched) continue;
+    // 2) 语气兜底(模拟 LLM:无关键词也能读出低落/焦虑)
+    for (const [re, dim, val, inten, ev] of TONE_LEXICON) {
+      if (!allow.has(dim)) continue;
+      if (re.test(text)) {
+        items.push({ snippet: text.slice(0, 200), dimension: dim, valence: val,
+          intensity_hint: inten, confidence: 0.6, evidence: ev });
+        break;
+      }
+    }
+    // 3) 无关闲聊 → 什么都不产出
+  }
+  return { items, crisis };
+}
+
+// ---------- 自由聊天的共情回应(真·DeepSeek) ----------
+// 与问卷里的 deepseekReply 不同:那个绑定"当前题",这里是开放倾听,不往某道题引。
+// 复用同一个 callDeepSeek 传输层 + 同一套红线。失败由调用方 catch 降级。
+async function deepseekDailyReply(history, { timeoutMs = 12000 } = {}) {
+  const { callDeepSeek } = require('../llmDeepSeek');
+  const sys = [
+    '你是一个温柔、稳定、真诚的倾听者,正陪着用户做一次"今天过得怎么样"的随心聊天(用户已知情同意)。',
+    '你的任务是陪伴,不是问卷,也不是客服。像朋友一样自然地接住对方的话。',
+    '',
+    '怎么说话:',
+    '- 先接住用户此刻的情绪或内容,简短回应、让他感到被听见。',
+    '- 可以温和地、开放地邀请他多说一点今天的状态——睡得好不好、累不累、心里压着什么,但别审问。',
+    '- 通常 2 到 4 句、120 字内;最多问一个开放性的小问题,别连环追问。',
+    '- 语气、用词、要不要举例,你自己拿捏。',
+    '',
+    '绝对红线:',
+    '- 不做任何诊断、不下结论、不评判、不贴标签。',
+    '- 绝不出现"分数""评分""量表""测评""第几题""选项"这类字眼,这是聊天不是考试。',
+    '- 不强迫用户给频率、天数、数字。用户说"说不清/还好吧"时,告诉他这很正常,别逼。',
+    '',
+    '输出纯文本,不要 JSON,不要用引号把整段话包起来。',
+  ].join('\n');
+
+  const trimmed = (history || []).slice(-12).map(m => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: String(m.content || ''),
+  }));
+  const content = await callDeepSeek(
+    [{ role: 'system', content: sys }, ...trimmed],
+    { timeoutMs, json: false, temperature: 0.7 });
+  return content.trim();
+}
+
+function flattenSignals(signals) {
+  const out = [];
+  if (!signals || !signals.dimensions) return out;
+  for (const [dim, v] of Object.entries(signals.dimensions)) {
+    if (v.enabled === false) continue;
+    for (const s of v.signals || []) {
+      if (s.enabled === false) continue;
+      for (const p of s.patterns) {
+        out.push({ dimension: dim, re: new RegExp(p, 'iu'), valence: s.valence || v.default_valence,
+          intensity_prior: typeof s.intensity_prior === 'number' ? s.intensity_prior : 1,
+          evidence_hint: s.evidence_hint || v.label || '' });
+      }
+    }
+  }
+  return out;
+}
+
+// ---------- 自由聊的共情回应(真 DeepSeek) ----------
+// 与问卷版 deepseekReply 不同:这里是"开放陪伴",不把话头往某道题上引,也没有 scale 上下文。
+// 三条红线照搬房规:不诊断、不提分数/题号/选项/量表、不盘问题目之外的症状。
+async function deepseekDailyReply(messages) {
+  const { callDeepSeek } = require('../llmDeepSeek');
+  const sys = [
+    '你是在"陪着"用户聊今天过得怎么样的伙伴,不是医生,也不是在做问卷。',
+    '像一个真诚、有温度的倾听者那样自然说话:先接住用户此刻的情绪,再轻轻邀请他多说一点。',
+    '语气、长短自己拿捏,通常 1 到 3 句、80 字内,别啰嗦,别每次都同一个句式。',
+    '三条红线绝不可碰:',
+    '- 不做任何诊断、不下结论、不评判;',
+    '- 绝不出现"分数""题""选项""量表""评分"这类字眼;',
+    '- 不追问题目式的症状清单,不逼用户给频率或天数。',
+    '另外:接住情绪即可,不要反复放大或咀嚼负面感受,也不要强行打鸡血。',
+    '输出纯文本,不要 JSON,不要用引号把整段包起来。',
+  ].join('\n');
+  const recent = (messages || []).slice(-8)
+    .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content) }));
+  const content = await callDeepSeek(
+    [{ role: 'system', content: sys }, ...recent],
+    { timeoutMs: 12000, json: false, temperature: 0.7 });
+  return content.trim();
+}
+
+// 无 key / 调用失败时的兜底,保证页面永不卡死(房规:绝不崩)。
+const CANNED = ['嗯,我在听。', '谢谢你愿意说这些。', '我记下了,你继续说。', '听起来不容易,辛苦了。'];
+function cannedDailyReply() { return CANNED[Math.floor(Math.random() * CANNED.length)]; }
+
+module.exports = { deepseekDailyMap, stubDailyMap, deepseekDailyReply, cannedDailyReply, CRISIS_REGEX };
